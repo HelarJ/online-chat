@@ -1,4 +1,4 @@
-# Online Chat
-Rühmatöö projekt Tartu Ülikooli õppeaines Objektorienteeritud Programmeerimine. 
+# Online chat
+Objektorienteeritud Programmeerimise rühmatöö projekt.
 
-Helar Jaadla, Raiko Kittus 2020.
+Helar Jaadla, [Raiko Kittus](github.com/raikok). Tartu Ülikool 2020.

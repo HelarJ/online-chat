@@ -1,2 +1,4 @@
-out
-target
+log/
+target/
+server/target/
+client/target/

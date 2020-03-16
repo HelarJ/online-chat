@@ -1,4 +1,4 @@
 # Online chat
-Rühmatöö projekt Objektorinteeritud Programmeerimise õppeaines Tartu Ülikoolis.
+Objektorienteeritud Programmeerimise rühmatöö projekt.
 
-Helar Jaadla, [Raiko Kittus](github.com/raikok). 2020.
+Helar Jaadla, [Raiko Kittus](github.com/raikok). Tartu Ülikool 2020.

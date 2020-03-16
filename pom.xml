@@ -6,7 +6,12 @@
 
     <groupId>ee.ut.oop</groupId>
     <artifactId>maven-online-chat</artifactId>
+    <packaging>pom</packaging>
     <version>0.1</version>
+    <modules>
+        <module>server</module>
+        <module>client</module>
+    </modules>
 
     <properties>
         <maven.compiler.source>11</maven.compiler.source>

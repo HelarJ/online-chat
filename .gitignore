@@ -1,2 +1,4 @@
 log/
 target/
+server/target/
+client/target/

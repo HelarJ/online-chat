@@ -64,25 +64,28 @@ public class Ühendus {
         channel.register(this.selector, SelectionKey.OP_READ);
     }
 
-    private void read(SelectionKey key) throws IOException {
+    private void read(SelectionKey key) throws IOException{
         SocketChannel channel = (SocketChannel) key.channel();
         Socket s = channel.socket();
         ByteBuffer buffer = ByteBuffer.allocate(1024);
         int count;
-        count = channel.read(buffer);
+        byte[] data;
+        try {
+            count = channel.read(buffer);
 
-        byte[] data = new byte[count];
-        System.arraycopy(buffer.array(), 0, data, 0, count);
-        String vastus = new String(data);
-        System.out.println("Got: " + vastus);
-
-        if (vastus.equals("/exit")){
+            data = new byte[count];
+            System.arraycopy(buffer.array(), 0, data, 0, count);
+            String vastus = new String(data);
+            System.out.println("Got: " + vastus);
+        } catch (IOException e){
             this.dataMapper.remove(channel);
             System.out.printf("Connection closed by client: %s%n", s.getRemoteSocketAddress());
             channel.close();
             key.cancel();
             return;
+
         }
+
         sendToAll(ByteBuffer.wrap(data)); //saadab kõigile channelitele
     }
     private void sendToAll(ByteBuffer data){

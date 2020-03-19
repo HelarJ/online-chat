@@ -16,23 +16,19 @@ public class Saatja implements Runnable {
     public void run() {
         System.out.println("Waiting for input...");
         Scanner in = new Scanner(System.in);
-        String message;
-        while (true){
-            message = in.nextLine();
-            byte[] mBytes= message.getBytes();
+        String message = in.nextLine();
+        while (!message.equals("/exit")) {
+
+            byte[] mBytes = message.getBytes();
             ByteBuffer byteBuffer = ByteBuffer.wrap(mBytes);
-            try{
+            try {
                 client.write(byteBuffer);
-            } catch (IOException e){
+            } catch (IOException e) {
                 System.out.println("Error writing: ");
                 System.out.println(e.getMessage());
             }
-
-            System.out.println("Sent: "+message);
             byteBuffer.clear();
-            if (message.equals("/exit")){
-                break;
-            }
+            message = in.nextLine();
         }
         try {
             client.close();

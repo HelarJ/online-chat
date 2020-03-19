@@ -30,5 +30,6 @@ public class Kuulaja implements Runnable {
             byteBuffer.clear();
         }
         System.out.println("Closed client.");
+        System.exit(1);
     }
 }

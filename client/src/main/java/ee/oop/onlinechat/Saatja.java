@@ -33,7 +33,7 @@ public class Saatja implements Runnable {
         try {
             client.close();
         } catch (IOException e) {
-            System.out.println("Couldnt close the client.");
+            System.out.println("Couldn't close the client.");
             System.out.println(e.getMessage());
         }
 

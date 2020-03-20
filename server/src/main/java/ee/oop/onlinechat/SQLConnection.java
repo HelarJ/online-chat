@@ -8,13 +8,13 @@ import java.sql.*;
  * Class for connecting to 'onlinechat' database.
  */
 public class SQLConnection {
-    String ip = "localhost";
-    String port = "3306";
-    String andmebaas = "onlinechat";
-    String andmebaasiKasutaja = "kasutaja";
-    String andmebaasiParool = "paroolike"; // todo need tuleb ka encryptida, arvutist sisse lugeda?
+    private final String ip = "localhost";
+    private final String port = "3306";
+    private final String andmebaas = "onlinechat";
+    private final String andmebaasiKasutaja = "kasutaja";
+    private final String andmebaasiParool = "paroolike"; // todo need tuleb ka encryptida, arvutist sisse lugeda?
 
-    private int registreeri(String kasutajaNimi, String parool) throws SQLException {
+    public int register(String kasutajaNimi, String parool) throws SQLException {
         try (Connection ühendus = DriverManager.getConnection("jdbc:mysql://" + ip + ":" + port + "/" + andmebaas, andmebaasiKasutaja, andmebaasiParool)) {
 
             PreparedStatement stmt = ühendus.prepareStatement("CALL sp_create_user(?,?)");
@@ -32,7 +32,7 @@ public class SQLConnection {
         }
     }
 
-    private int login(String kasutajaNimi, String s_parool) throws SQLException {
+    public int login(String kasutajaNimi, String s_parool) throws SQLException {
         try (Connection ühendus = DriverManager.getConnection("jdbc:mysql://" + ip + ":" + port + "/" + andmebaas, andmebaasiKasutaja, andmebaasiParool)) {
             PreparedStatement stmt = ühendus.prepareStatement("CALL sp_login(?)");
             stmt.setString(1, kasutajaNimi);

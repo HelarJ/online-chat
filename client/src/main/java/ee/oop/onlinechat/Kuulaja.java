@@ -26,7 +26,7 @@ public class Kuulaja implements Runnable {
             }
             byte[] data = new byte[count];
             System.arraycopy(byteBuffer.array(), 0, data, 0, count); //loob buffrist arv suurusega array
-            System.out.println("Got: " + new String(data));
+            System.out.println(new String(data));
             byteBuffer.clear();
         }
         System.out.println("Closed client.");

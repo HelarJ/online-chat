@@ -9,14 +9,14 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
+import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Scanner;
 
 public class Ühendus {
     private Selector selector;
-    private Map<SocketChannel, KliendiInfo> dataMapper;
+    private Map<SocketChannel, ClientInfo> dataMapper;
     private InetSocketAddress listenAddress;
 
     public Ühendus(String aadress, int port) {
@@ -32,8 +32,8 @@ public class Ühendus {
         serverChannel.socket().bind(listenAddress);
         serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
         System.out.println("Server started...");
-        Scanner in = new Scanner(System.in); // lisasin temporarily scanneri closimiseks, et loop ei annaks warningut
-        do {
+
+        while (true) {
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ignored) {
@@ -52,7 +52,7 @@ public class Ühendus {
                     this.read(key);
                 }
             }
-        } while (!in.nextLine().equals(""));
+        }
     }
 
     private void accept(SelectionKey key) throws IOException {
@@ -62,12 +62,10 @@ public class Ühendus {
         Socket socket = channel.socket();
         SocketAddress remoteAddr = socket.getRemoteSocketAddress();
         System.out.println("Connected to: " + remoteAddr);
-        byte[] greeting = "Welcome to blablaChat! To change your name, type /name [name here]!".getBytes();
-        ByteBuffer buffer = ByteBuffer.wrap(greeting);
-        dataMapper.put(channel, new KliendiInfo()); //jätab alguses channeli meelde koos default nimega.
+        String greeting = "Welcome to blablaChat! To start using chat, please use command /register [username] [password]!";
+        dataMapper.put(channel, new ClientInfo()); //jätab alguses channeli meelde koos default nimega.
         channel.register(this.selector, SelectionKey.OP_READ);
-
-        sendBack(buffer, channel);
+        sendTextBack(greeting, channel);
     }
 
     private void read(SelectionKey key) throws IOException {
@@ -87,30 +85,75 @@ public class Ühendus {
             if (vastus.substring(0, 1).equals("/")) { // kui oli command
                 String[] vastuseTükid = vastus.split(" ");
                 switch (vastuseTükid[0]) {
+
                     case "/help":
-                        byte[] commandid = "Available commands: /help, /name, /exit".getBytes();
-                        buffer = ByteBuffer.wrap(commandid);
-                        sendBack(buffer, channel);
+                        String commandid = "Available commands: /help, /register, /login, /exit";
+                        sendTextBack(commandid, channel);
                         break;
 
-                    case "/name":
-                        StringBuilder nimi = new StringBuilder();
-                        for (int i = 1; i < vastuseTükid.length; i++) {
-                            nimi.append(vastuseTükid[i]);
-                            if (!(i == vastuseTükid.length - 1)) {
-                                nimi.append(" ");
+                    case "/register":
+                        if (!dataMapper.get(channel).isLoggedIn()) {
+                            if (vastuseTükid.length != 3) {
+                                String wrongArgs = "Invalid arguments for this command! Correct syntax: /register [username] [password]";
+                                sendTextBack(wrongArgs, channel);
+                            } else {
+                                SQLConnection sqlConnection = new SQLConnection();
+                                int response = sqlConnection.register(vastuseTükid[1], vastuseTükid[2]);
+                                if (response == 1) {
+                                    String accExists = "An account with this name already exists. Use /login [username] [password]";
+                                    sendTextBack(accExists, channel);
+                                } else if (response == 0) {
+                                    String accCreated = "Account created! You may start sending messages!";
+                                    sendTextBack(accCreated, channel);
+                                    dataMapper.get(channel).setName(vastuseTükid[1]);
+                                    dataMapper.get(channel).setLoggedIn(true);
+                                }
                             }
+                        } else {
+                            String alreadyLoggedIn = "This account is logged in! Please /logout before registering again.";
+                            sendTextBack(alreadyLoggedIn, channel);
                         }
-                        dataMapper.get(channel).setNimi(nimi.toString());
-                        byte[] nameChanged = ("Name successfully changed to " + nimi + ".").getBytes();
-                        buffer = ByteBuffer.wrap(nameChanged);
-                        sendBack(buffer, channel);
+                        break;
+
+                    case "/login":
+                        if (!dataMapper.get(channel).isLoggedIn()) {
+                            if (vastuseTükid.length != 3) {
+                                String wrongArgs = "Invalid arguments for this command! Correct syntax: /login [username] [password]";
+                                sendTextBack(wrongArgs, channel);
+                            } else {
+                                SQLConnection sqlConnection = new SQLConnection();
+                                int response = sqlConnection.login(vastuseTükid[1], vastuseTükid[2]);
+                                if (response == 1) {
+                                    String invalidLogin = "Invalid login! Please try again.";
+                                    sendTextBack(invalidLogin, channel);
+                                } else if (response == 0) {
+                                    String loginSuccessful = "Login successful.";
+                                    sendTextBack(loginSuccessful, channel);
+                                    dataMapper.get(channel).setName(vastuseTükid[1]);
+                                    dataMapper.get(channel).setLoggedIn(true);
+                                }
+                            }
+                        } else {
+                            String alreadyLoggedIn = "This account is logged in! Please /logout before logging in again.";
+                            sendTextBack(alreadyLoggedIn, channel);
+                        }
+                        break;
+
+                    case "/logout":
+                        String logOut = "Logged out.";
+                        sendTextBack(logOut, channel);
+                        dataMapper.get(channel).setLoggedIn(false);
+                        dataMapper.get(channel).setName("Default");
                         break;
                 }
-            } else {
-                sendTextToAll(dataMapper.get(channel), vastus); //saadab kõigile channelitele todo (võib-olla peab panema tagasi try seest välja ja lisama IF command checki (et ei saadaks kõigile kirjutatud commandi))
+            } else if (dataMapper.get(channel).isLoggedIn()) { // kasutaja on sisse logitud
+                sendMsgWithSenderToAll(dataMapper.get(channel), vastus); //saadab kõigile channelitele todo (võib-olla peab panema tagasi try seest välja ja lisama IF command checki (et ei saadaks kõigile kirjutatud commandi))
+            } else { // kasutaja pole sisse logitud
+                String loginRequest = "Please log in or create an account before sending messages with /register [username] [password]!";
+                sendTextBack(loginRequest, channel);
             }
-        } catch (IOException e) {
+        } catch (IOException | SQLException e) {
+            dataMapper.get(channel).setLoggedIn(false);
             this.dataMapper.remove(channel);
             System.out.printf("Connection closed by client: %s%n", s.getRemoteSocketAddress());
             channel.close();
@@ -130,14 +173,14 @@ public class Ühendus {
         });
     }*/
 
-    private void sendTextToAll(KliendiInfo saatja, String tekst) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
-        String saadetavTekst = saatja.getNimi() + ": " + tekst;
-        byte[] bytes = saadetavTekst.getBytes();
+    private void sendMsgWithSenderToAll(ClientInfo saatja, String text) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
+        String msgToSend = saatja.getName() + ": " + text;
+        byte[] bytes = msgToSend.getBytes();
         ByteBuffer data = ByteBuffer.wrap(bytes);
         dataMapper.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
             try {
                 c.write(data);
-                System.out.printf("Sent: %s to %s%n at %s%n", new String(data.array()), d.getNimi(), c.getRemoteAddress());
+                System.out.printf("Sent: %s to %s%n at %s%n", new String(data.array()), d.getName(), c.getRemoteAddress());
                 data.rewind();
             } catch (IOException e) {
                 System.out.println("Error sending to channel: " + e.getMessage());
@@ -145,10 +188,12 @@ public class Ühendus {
         });
     }
 
-    private void sendBack(ByteBuffer data, SocketChannel c) {
+    private void sendTextBack(String tekst, SocketChannel c) {
+        byte[] tekstBytes = tekst.getBytes();
+        ByteBuffer data = ByteBuffer.wrap(tekstBytes);
         try {
             c.write(data);
-            System.out.printf("Sent: %s to %s%n at %s%n", new String(data.array()), dataMapper.get(c).getNimi(), c.getRemoteAddress());
+            System.out.printf("Sent: %s to %s%n at %s%n", new String(data.array()), dataMapper.get(c).getName(), c.getRemoteAddress());
             data.rewind();
         } catch (IOException e) {
             System.out.println("Error sending to channel: " + e.getMessage());

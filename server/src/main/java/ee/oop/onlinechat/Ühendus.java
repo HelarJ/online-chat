@@ -24,7 +24,6 @@ public class Ühendus {
         dataMapper = new HashMap<>();
     }
 
-
     public void ühenda() throws IOException {
         this.selector = Selector.open();
         ServerSocketChannel serverChannel = ServerSocketChannel.open();
@@ -34,7 +33,7 @@ public class Ühendus {
         serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
         System.out.println("Server started...");
         Scanner in = new Scanner(System.in); // lisasin temporarily scanneri closimiseks, et loop ei annaks warningut
-        while (true) {
+        do {
             try {
                 Thread.sleep(50);
             } catch (InterruptedException ignored) {
@@ -53,11 +52,7 @@ public class Ühendus {
                     this.read(key);
                 }
             }
-            String closer = in.nextLine();
-            if (closer.equals("")) {
-                break;
-            }
-        }
+        } while (!in.nextLine().equals(""));
     }
 
     private void accept(SelectionKey key) throws IOException {

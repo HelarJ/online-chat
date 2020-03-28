@@ -13,15 +13,18 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
+import java.util.Scanner;
 
 public class Ühendus {
     private Selector selector;
     private Map<SocketChannel, ClientInfo> dataMapper;
     private InetSocketAddress listenAddress;
+    private ChatLog chatLog;
 
     public Ühendus(String aadress, int port) {
         listenAddress = new InetSocketAddress(aadress, port);
         dataMapper = new HashMap<>();
+        chatLog = new ChatLog("MainChannel");
     }
 
     public void ühenda() throws IOException {
@@ -33,11 +36,17 @@ public class Ühendus {
         serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
         System.out.println("Server started...");
 
-        while (true) {
-            try {
-                Thread.sleep(50);
-            } catch (InterruptedException ignored) {
-            }
+        while (Server.isRunning()) {
+            Runnable sulgeja = () -> {
+                Scanner sc = new Scanner(System.in);
+                String command = "";
+                while (!command.equals("/exit")){
+                    command = sc.nextLine();
+                }
+                Server.shutdown();
+            };
+            new Thread(sulgeja).start();
+
             this.selector.select();
             Iterator<SelectionKey> keys = this.selector.selectedKeys().iterator();
             while (keys.hasNext()) {
@@ -83,7 +92,7 @@ public class Ühendus {
             System.out.println("Got: " + vastus);
 
             if (vastus.substring(0, 1).equals("/")) { // kui oli command
-                String[] vastuseTükid = vastus.split(" ");
+                String[] vastuseTükid = vastus.split(" "); //todo raiko liiguta switch eraldi meetodisse
                 switch (vastuseTükid[0]) {
 
                     case "/help":
@@ -131,6 +140,7 @@ public class Ühendus {
                                     sendTextBack(loginSuccessful, channel);
                                     dataMapper.get(channel).setName(vastuseTükid[1]);
                                     dataMapper.get(channel).setLoggedIn(true);
+                                    sendChatLog(channel); //saadab sisselogimisel vanad sõnumid.
                                 }
                             }
                         } else {
@@ -152,7 +162,7 @@ public class Ühendus {
                 String loginRequest = "Please log in or create an account before sending messages with /register [username] [password]!";
                 sendTextBack(loginRequest, channel);
             }
-        } catch (IOException | SQLException e) {
+        } catch (IOException e) {
             dataMapper.get(channel).setLoggedIn(false);
             this.dataMapper.remove(channel);
             System.out.printf("Connection closed by client: %s%n", s.getRemoteSocketAddress());
@@ -174,7 +184,9 @@ public class Ühendus {
     }*/
 
     private void sendMsgWithSenderToAll(ClientInfo saatja, String text) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
-        String msgToSend = saatja.getName() + ": " + text;
+        Message msg = new Message(saatja.getName(), text);
+        chatLog.logMessage(msg); //Logitakse ainult need sõnumid, mida nagunii kõigile oleks saadetud.
+        String msgToSend = msg.toString();
         byte[] bytes = msgToSend.getBytes();
         ByteBuffer data = ByteBuffer.wrap(bytes);
         dataMapper.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
@@ -197,6 +209,16 @@ public class Ühendus {
             data.rewind();
         } catch (IOException e) {
             System.out.println("Error sending to channel: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Sends (up to) 100 last logged messages to specified channel.
+     * @param c channel to send to.
+     */
+    private void sendChatLog(SocketChannel c){
+        for (Message msg:chatLog.getLastMessages(100)){
+            sendTextBack(msg.toString(),c);
         }
     }
 }

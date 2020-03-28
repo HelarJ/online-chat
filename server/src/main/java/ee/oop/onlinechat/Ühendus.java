@@ -35,18 +35,18 @@ public class Ühendus {
         serverChannel.socket().bind(listenAddress);
         serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
         System.out.println("Server started...");
+        Runnable sulgeja = () -> {
+            Scanner sc = new Scanner(System.in);
+            String command = "";
+            while (!command.equals("/exit")){
+                command = sc.nextLine();
+            }
+            Server.shutdown();
+            System.exit(0);
+        };
+        new Thread(sulgeja).start();
 
         while (Server.isRunning()) {
-            Runnable sulgeja = () -> {
-                Scanner sc = new Scanner(System.in);
-                String command = "";
-                while (!command.equals("/exit")){
-                    command = sc.nextLine();
-                }
-                Server.shutdown();
-            };
-            new Thread(sulgeja).start();
-
             this.selector.select();
             Iterator<SelectionKey> keys = this.selector.selectedKeys().iterator();
             while (keys.hasNext()) {

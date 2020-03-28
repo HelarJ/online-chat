@@ -18,9 +18,19 @@ public class Server
 
     /**
      * Sets the running flag to false so all loops using it as a refrence will exit gracefully.
+     * If the server has not shut down in 5 seconds, forcefully closes it.
      */
     public static void shutdown(){
+        System.out.println("Shutting down server...");
         running = false;
+        new Thread(() -> {
+            try {
+                Thread.sleep(5000);
+            } catch (InterruptedException ignored) {
+            }
+            System.exit(0);
+
+        }).start();
     }
     public static boolean isRunning() {
         return running;

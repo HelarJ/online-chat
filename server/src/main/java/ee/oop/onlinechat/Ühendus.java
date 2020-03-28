@@ -42,7 +42,6 @@ public class Ühendus {
                 command = sc.nextLine();
             }
             Server.shutdown();
-            System.exit(0);
         };
         new Thread(sulgeja).start();
 

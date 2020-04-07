@@ -75,8 +75,11 @@ public class SQLConnection {
 
     public void logMessage(String channelName, Message msg){
         try (Connection ühendus = DriverManager.getConnection(andmebaasiUrl)) {
-            Statement stmt = ühendus.createStatement();
-            stmt.executeQuery("CALL "+andmebaas+".sp_log_message('" + channelName + "', '" +msg.getUsername()+"', '"+msg.getMessage()+"');");
+            PreparedStatement stmt = ühendus.prepareStatement("CALL sp_log_message(?,?,?)");
+            stmt.setString(1, channelName);
+            stmt.setString(2, msg.getUsername());
+            stmt.setString(3, msg.getMessage());
+            stmt.executeUpdate();
 
         } catch (SQLException e){
             System.out.println("Error connecting to the database (logMessage).");

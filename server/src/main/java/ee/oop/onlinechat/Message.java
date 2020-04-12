@@ -11,12 +11,19 @@ import java.util.Locale;
 public class Message {
     String username;
     String message;
-    Instant timestamp;
+    String timestamp;
 
     public Message(String username, String message) {
         this.username = username;
         this.message = message;
-        this.timestamp = java.time.Instant.now();
+        DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
+        this.timestamp = formatter.format(java.time.Instant.now());
+    }
+
+    public Message(String username, String message, String timestamp) {
+        this.username = username;
+        this.message = message;
+        this.timestamp = timestamp;
     }
 
     public String getUsername() {
@@ -29,7 +36,6 @@ public class Message {
 
     @Override
     public String toString() {
-        DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
-        return ("["+formatter.format(timestamp)+"] "+username+": " + message);
+        return ("["+(timestamp)+"] "+username+": " + message);
     }
 }

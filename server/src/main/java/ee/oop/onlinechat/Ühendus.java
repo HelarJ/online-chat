@@ -9,7 +9,6 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -38,7 +37,7 @@ public class Ühendus {
         Runnable sulgeja = () -> {
             Scanner sc = new Scanner(System.in);
             String command = "";
-            while (!command.equals("/exit")){
+            while (!command.equals("/exit")) {
                 command = sc.nextLine();
             }
             Server.shutdown();
@@ -91,70 +90,7 @@ public class Ühendus {
             System.out.println("Got: " + vastus);
 
             if (vastus.substring(0, 1).equals("/")) { // kui oli command
-                String[] vastuseTükid = vastus.split(" "); //todo raiko liiguta switch eraldi meetodisse
-                switch (vastuseTükid[0]) {
-
-                    case "/help":
-                        String commandid = "Available commands: /help, /register, /login, /exit";
-                        sendTextBack(commandid, channel);
-                        break;
-
-                    case "/register":
-                        if (!dataMapper.get(channel).isLoggedIn()) {
-                            if (vastuseTükid.length != 3) {
-                                String wrongArgs = "Invalid arguments for this command! Correct syntax: /register [username] [password]";
-                                sendTextBack(wrongArgs, channel);
-                            } else {
-                                SQLConnection sqlConnection = new SQLConnection();
-                                int response = sqlConnection.register(vastuseTükid[1], vastuseTükid[2]);
-                                if (response == 1) {
-                                    String accExists = "An account with this name already exists. Use /login [username] [password]";
-                                    sendTextBack(accExists, channel);
-                                } else if (response == 0) {
-                                    String accCreated = "Account created! You may start sending messages!";
-                                    sendTextBack(accCreated, channel);
-                                    dataMapper.get(channel).setName(vastuseTükid[1]);
-                                    dataMapper.get(channel).setLoggedIn(true);
-                                }
-                            }
-                        } else {
-                            String alreadyLoggedIn = "This account is logged in! Please /logout before registering again.";
-                            sendTextBack(alreadyLoggedIn, channel);
-                        }
-                        break;
-
-                    case "/login":
-                        if (!dataMapper.get(channel).isLoggedIn()) {
-                            if (vastuseTükid.length != 3) {
-                                String wrongArgs = "Invalid arguments for this command! Correct syntax: /login [username] [password]";
-                                sendTextBack(wrongArgs, channel);
-                            } else {
-                                SQLConnection sqlConnection = new SQLConnection();
-                                int response = sqlConnection.login(vastuseTükid[1], vastuseTükid[2]);
-                                if (response == 1) {
-                                    String invalidLogin = "Invalid login! Please try again.";
-                                    sendTextBack(invalidLogin, channel);
-                                } else if (response == 0) {
-                                    String loginSuccessful = "Login successful.";
-                                    sendTextBack(loginSuccessful, channel);
-                                    dataMapper.get(channel).setName(vastuseTükid[1]);
-                                    dataMapper.get(channel).setLoggedIn(true);
-                                    sendChatLog(channel); //saadab sisselogimisel vanad sõnumid.
-                                }
-                            }
-                        } else {
-                            String alreadyLoggedIn = "This account is logged in! Please /logout before logging in again.";
-                            sendTextBack(alreadyLoggedIn, channel);
-                        }
-                        break;
-
-                    case "/logout":
-                        String logOut = "Logged out.";
-                        sendTextBack(logOut, channel);
-                        dataMapper.get(channel).setLoggedIn(false);
-                        dataMapper.get(channel).setName("Default");
-                        break;
-                }
+                commandSwitch(vastus, channel);
             } else if (dataMapper.get(channel).isLoggedIn()) { // kasutaja on sisse logitud
                 sendMsgWithSenderToAll(dataMapper.get(channel), vastus); //saadab kõigile channelitele todo (võib-olla peab panema tagasi try seest välja ja lisama IF command checki (et ei saadaks kõigile kirjutatud commandi))
             } else { // kasutaja pole sisse logitud
@@ -170,6 +106,7 @@ public class Ühendus {
         }
     }
 
+
     /*private void sendToAll(ByteBuffer data) { // saab hiljem kasutada, kui saadame pilte ja asju
         dataMapper.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
             try {
@@ -181,7 +118,6 @@ public class Ühendus {
             }
         });
     }*/
-
     private void sendMsgWithSenderToAll(ClientInfo saatja, String text) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
         Message msg = new Message(saatja.getName(), text);
         chatLog.logMessage(msg); //Logitakse ainult need sõnumid, mida nagunii kõigile oleks saadetud.
@@ -199,8 +135,8 @@ public class Ühendus {
         });
     }
 
-    private void sendTextBack(String tekst, SocketChannel c) {
-        byte[] tekstBytes = tekst.getBytes();
+    private void sendTextBack(String text, SocketChannel c) {
+        byte[] tekstBytes = text.getBytes();
         ByteBuffer data = ByteBuffer.wrap(tekstBytes);
         try {
             c.write(data);
@@ -212,12 +148,114 @@ public class Ühendus {
     }
 
     /**
-     * Sends (up to) 100 last logged messages to specified channel.
+     * Sends (up to) @param amount of last logged messages to specified channel.
      * @param c channel to send to.
+     * @param amount of messages to return to the specified channel.
      */
-    private void sendChatLog(SocketChannel c){
-        for (Message msg:chatLog.getLastMessages(100)){
-            sendTextBack(msg.toString(),c);
+    private void sendChatLog(SocketChannel c, int amount) {
+        for (Message msg : chatLog.getLastMessages(amount)) {
+            sendTextBack(msg.toString(), c);
+        }
+    }
+
+    /**
+     * Tries to parse the command the user has selected (with the character '/').
+     * Available commands as of the moment: help, register, login, logout, history
+     *
+     * @param answer  line of text received from user, starting with '/' and used to define
+     *                the selected command as well as additional needed parameters.
+     * @param channel SocketChannel where the line of text (answer) was received from and
+     *                used to send information back to the same channel.
+     */
+    private void commandSwitch(String answer, SocketChannel channel) {
+        String[] answerParts = answer.split(" ");
+        switch (answerParts[0]) {
+
+            case "/help":
+                String commands = "Available commands: /help, /register, /login, /exit";
+                sendTextBack(commands, channel);
+                break;
+
+            case "/register":
+                if (!dataMapper.get(channel).isLoggedIn()) {
+                    if (answerParts.length != 3) {
+                        String wrongArgs = "Invalid arguments for this command! Correct syntax: /register [username] [password]";
+                        sendTextBack(wrongArgs, channel);
+                    } else {
+                        SQLConnection sqlConnection = new SQLConnection();
+                        int response = sqlConnection.register(answerParts[1], answerParts[2]);
+                        if (response == 1) {
+                            String accExists = "An account with this name already exists. Use /login [username] [password]";
+                            sendTextBack(accExists, channel);
+                        } else if (response == 0) {
+                            String accCreated = "Account created! You may start sending messages!";
+                            sendTextBack(accCreated, channel);
+                            dataMapper.get(channel).setName(answerParts[1]);
+                            dataMapper.get(channel).setLoggedIn(true);
+                        }
+                    }
+                } else {
+                    String alreadyLoggedIn = "This account is logged in! Please /logout before registering again.";
+                    sendTextBack(alreadyLoggedIn, channel);
+                }
+                break;
+
+            case "/login":
+                if (!dataMapper.get(channel).isLoggedIn()) {
+                    if (answerParts.length != 3) {
+                        String wrongArgs = "Invalid arguments for this command! Correct syntax: /login [username] [password]";
+                        sendTextBack(wrongArgs, channel);
+                    } else {
+                        SQLConnection sqlConnection = new SQLConnection();
+                        int response = sqlConnection.login(answerParts[1], answerParts[2]);
+                        if (response == 1) {
+                            String invalidLogin = "Invalid login! Please try again.";
+                            sendTextBack(invalidLogin, channel);
+                        } else if (response == 0) {
+                            String loginSuccessful = "Login successful.";
+                            sendTextBack(loginSuccessful, channel);
+                            dataMapper.get(channel).setName(answerParts[1]);
+                            dataMapper.get(channel).setLoggedIn(true);
+                            sendChatLog(channel, 100); //saadab sisselogimisel vanad sõnumid.
+                        }
+                    }
+                } else {
+                    String alreadyLoggedIn = "This account is logged in! Please /logout before logging in again.";
+                    sendTextBack(alreadyLoggedIn, channel);
+                }
+                break;
+
+            case "/logout":
+                String logOut = "Logged out.";
+                sendTextBack(logOut, channel);
+                dataMapper.get(channel).setLoggedIn(false);
+                dataMapper.get(channel).setName("Default");
+                break;
+
+            case "/history":
+                if (dataMapper.get(channel).isLoggedIn()) {
+                    if (answerParts.length != 2) {
+                        String wrongArgs = "You have either entered too few or too many arguments. Correct syntax: /history [amount]";
+                        sendTextBack(wrongArgs, channel);
+                    } else {
+                        try {
+                            int amount = Integer.parseInt(answerParts[1]);
+                            if (amount > 500 || amount < 0) {
+                                String tooManyMsg = "The number you have entered is either too big or too small! Please enter" +
+                                        " a number between 0 and 500";
+                                sendTextBack(tooManyMsg, channel);
+                            } else {
+                                sendChatLog(channel, amount);
+                            }
+                        } catch (NumberFormatException e) {
+                            String incorrectNum = "Incorrect number of messages to return. Please try again.";
+                            sendTextBack(incorrectNum, channel);
+                        }
+                    }
+                } else {
+                    String loginRequest = "Please log in before requesting this command!";
+                    sendTextBack(loginRequest, channel);
+                }
         }
     }
 }

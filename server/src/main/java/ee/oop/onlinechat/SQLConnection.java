@@ -3,6 +3,7 @@ package ee.oop.onlinechat;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import java.sql.*;
+import java.util.ArrayList;
 
 /**
  * Class for connecting to 'onlinechat' database.
@@ -87,6 +88,26 @@ public class SQLConnection {
             System.out.println(e.getSQLState());
             System.out.println(e.getMessage());
         }
+    }
 
+    public ArrayList<Message> getMessages(int amount) {
+        ArrayList<Message> messageList = new ArrayList<>();
+        try (Connection ühendus = DriverManager.getConnection(andmebaasiUrl)) {
+            PreparedStatement stmt = ühendus.prepareStatement("CALL sp_get_n_recent_messages(?)");
+            stmt.setInt(1, amount);
+            ResultSet resultSet = stmt.executeQuery();
+            while (resultSet.next()) {
+                Message message = new Message(resultSet.getString("username"),
+                        resultSet.getString("message"), resultSet.getString("timestamp"));
+                messageList.add(message);
+            }
+
+        } catch (SQLException e){
+            System.out.println("Error connecting to the database (getMessage).");
+            System.out.println(e.getErrorCode());
+            System.out.println(e.getSQLState());
+            System.out.println(e.getMessage());
+        }
+        return messageList;
     }
 }

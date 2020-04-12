@@ -1,7 +1,6 @@
 package ee.oop.onlinechat;
 
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.List;
 
 public class ChatLog {
@@ -17,11 +16,11 @@ public class ChatLog {
     }
 
     public void logMessage(Message message){
-        logList.add(message);
         sqlConnection.logMessage(channelName, message);
     }
 
     public Message[] getLastMessages(int amount){
+        logList = sqlConnection.getMessages(amount);
         Message[] logArray = logList.toArray(new Message[0]);
         if (logArray.length <= amount){
             return logArray;

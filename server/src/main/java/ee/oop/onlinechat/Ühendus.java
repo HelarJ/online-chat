@@ -19,6 +19,7 @@ public class Ühendus {
     private Map<SocketChannel, ClientInfo> dataMapper;
     private InetSocketAddress listenAddress;
     private ChatLog chatLog;
+    private SQLConnection sqlConnection;
 
     public Ühendus(String aadress, int port) {
         listenAddress = new InetSocketAddress(aadress, port);

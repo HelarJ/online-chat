@@ -12,6 +12,8 @@ public class ChatLog {
         this.channelName = channelName;
         this.logList = new ArrayList<>();
         this.sqlConnection = new SQLConnection();
+        logList = sqlConnection.getMessages(100, this.channelName);
+        System.out.println(". Loaded "+logList.size()+" messages from db.");
     }
     public String getChannelName(){
         return channelName;
@@ -22,7 +24,6 @@ public class ChatLog {
     }
 
     public Message[] getLastMessages(int amount){
-        logList = sqlConnection.getMessages(amount, this.channelName);
         Message[] logArray = logList.toArray(new Message[0]);
         if (logArray.length <= amount){
             return logArray;
@@ -30,6 +31,5 @@ public class ChatLog {
         Message[] newArray = new Message[amount];
         System.arraycopy(logArray,logArray.length-amount,newArray,0,newArray.length);
         return newArray;
-
     }
 }

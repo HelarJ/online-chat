@@ -30,7 +30,7 @@ public class ChatLogHandler {
     }
 
     public void addChannel(String channelName){
-        System.out.println("Added new channel "+ channelName);
+        System.out.print("Added new channel "+ channelName);
         chatLogs.put(channelName, new ChatLog(channelName));
     }
 }

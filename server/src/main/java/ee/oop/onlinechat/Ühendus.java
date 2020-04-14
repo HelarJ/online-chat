@@ -9,22 +9,19 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
-import java.util.Scanner;
+import java.util.*;
 
 public class Ühendus {
     private Selector selector;
     private Map<SocketChannel, ClientInfo> dataMapper;
     private InetSocketAddress listenAddress;
-    private ChatLog chatLog;
-    private SQLConnection sqlConnection;
+    private HashMap<String, ChatLog> chatLogs;
 
     public Ühendus(String aadress, int port) {
-        listenAddress = new InetSocketAddress(aadress, port);
-        dataMapper = new HashMap<>();
-        chatLog = new ChatLog("MainChannel");
+        this.listenAddress = new InetSocketAddress(aadress, port);
+        this.dataMapper = new HashMap<>();
+        this.chatLogs = new HashMap<>();
+        this.chatLogs.put("Main", new ChatLog("Main"));
     }
 
     public void ühenda() throws IOException {
@@ -70,7 +67,7 @@ public class Ühendus {
         Socket socket = channel.socket();
         SocketAddress remoteAddr = socket.getRemoteSocketAddress();
         System.out.println("Connected to: " + remoteAddr);
-        String greeting = "Welcome to blablaChat! To start using chat, please use command /register [username] [password]!";
+        String greeting = "Welcome to blablaChat! To start chatting, please /register [username] [password] or /login [username] [password]!";
         dataMapper.put(channel, new ClientInfo()); //jätab alguses channeli meelde koos default nimega.
         channel.register(this.selector, SelectionKey.OP_READ);
         sendTextBack(greeting, channel);
@@ -93,7 +90,7 @@ public class Ühendus {
             if (vastus.substring(0, 1).equals("/")) { // kui oli command
                 commandSwitch(vastus, channel);
             } else if (dataMapper.get(channel).isLoggedIn()) { // kasutaja on sisse logitud
-                sendMsgWithSenderToAll(dataMapper.get(channel), vastus); //saadab kõigile channelitele todo (võib-olla peab panema tagasi try seest välja ja lisama IF command checki (et ei saadaks kõigile kirjutatud commandi))
+                sendMsgWithSenderToChannel("Main", dataMapper.get(channel), vastus); //saadab kõigile channelitele
             } else { // kasutaja pole sisse logitud
                 String loginRequest = "Please log in or create an account before sending messages with /register [username] [password]!";
                 sendTextBack(loginRequest, channel);
@@ -119,9 +116,9 @@ public class Ühendus {
             }
         });
     }*/
-    private void sendMsgWithSenderToAll(ClientInfo saatja, String text) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
-        Message msg = new Message(saatja.getName(), text);
-        chatLog.logMessage(msg); //Logitakse ainult need sõnumid, mida nagunii kõigile oleks saadetud.
+    private void sendMsgWithSenderToChannel(String channelName, ClientInfo saatja, String text) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
+        Message msg = new Message(channelName, saatja.getName(), text);
+        this.chatLogs.get(channelName).logMessage(msg);
         String msgToSend = msg.toString();
         byte[] bytes = msgToSend.getBytes();
         ByteBuffer data = ByteBuffer.wrap(bytes);
@@ -142,9 +139,10 @@ public class Ühendus {
         try {
             c.write(data);
             System.out.printf("Sent: %s to %s%n at %s%n", new String(data.array()), dataMapper.get(c).getName(), c.getRemoteAddress());
-            data.rewind();
         } catch (IOException e) {
             System.out.println("Error sending to channel: " + e.getMessage());
+        } finally {
+            data.rewind();
         }
     }
 
@@ -154,7 +152,7 @@ public class Ühendus {
      * @param amount of messages to return to the specified channel.
      */
     private void sendChatLog(SocketChannel c, int amount) {
-        for (Message msg : chatLog.getLastMessages(amount)) {
+        for (Message msg : chatLogs.get("Main").getLastMessages(amount)) {
             sendTextBack(msg.toString(), c);
         }
     }
@@ -165,98 +163,108 @@ public class Ühendus {
      *
      * @param answer  line of text received from user, starting with '/' and used to define
      *                the selected command as well as additional needed parameters.
-     * @param channel SocketChannel where the line of text (answer) was received from and
-     *                used to send information back to the same channel.
+     * @param socketChannel SocketChannel where the line of text (answer) was received from and
+     *                used to send information back to the same socketChannel.
      */
-    private void commandSwitch(String answer, SocketChannel channel) {
+    private void commandSwitch(String answer, SocketChannel socketChannel) {
         String[] answerParts = answer.split(" ");
-        switch (answerParts[0]) {
-
-            case "/help":
+        Command command = Command.valueOf(answerParts[0].toUpperCase().substring(1)); //Saadud commande võrreldakse Command enumiga.
+        switch (command) {
+            case HELP:
                 String commands = "Available commands: /help, /register, /login, /exit";
-                sendTextBack(commands, channel);
+                sendTextBack(commands, socketChannel);
                 break;
-
-            case "/register":
-                if (!dataMapper.get(channel).isLoggedIn()) {
+            case REGISTER:
+                if (!dataMapper.get(socketChannel).isLoggedIn()) {
                     if (answerParts.length != 3) {
                         String wrongArgs = "Invalid arguments for this command! Correct syntax: /register [username] [password]";
-                        sendTextBack(wrongArgs, channel);
+                        sendTextBack(wrongArgs, socketChannel);
                     } else {
                         SQLConnection sqlConnection = new SQLConnection();
-                        int response = sqlConnection.register(answerParts[1], answerParts[2]);
-                        if (response == 1) {
-                            String accExists = "An account with this name already exists. Use /login [username] [password]";
-                            sendTextBack(accExists, channel);
-                        } else if (response == 0) {
+                        SQLResponse response = sqlConnection.register(answerParts[1], answerParts[2]);
+                        if (response == SQLResponse.SUCCESS) {
                             String accCreated = "Account created! You may start sending messages!";
-                            sendTextBack(accCreated, channel);
-                            dataMapper.get(channel).setName(answerParts[1]);
-                            dataMapper.get(channel).setLoggedIn(true);
+                            sendTextBack(accCreated, socketChannel);
+                            dataMapper.get(socketChannel).setName(answerParts[1]);
+                            dataMapper.get(socketChannel).setLoggedIn(true);
+                        } else if (response == SQLResponse.USEREXISTS) {
+                            String accExists = "An account with this name already exists. Use /login [username] [password]";
+                            sendTextBack(accExists, socketChannel);
+                        } else if (response == SQLResponse.ERROR){
+                            String connectionError = "Error connecting to the database. Please try again later.";
+                            sendTextBack(connectionError, socketChannel);
                         }
                     }
                 } else {
                     String alreadyLoggedIn = "This account is logged in! Please /logout before registering again.";
-                    sendTextBack(alreadyLoggedIn, channel);
+                    sendTextBack(alreadyLoggedIn, socketChannel);
                 }
                 break;
 
-            case "/login":
-                if (!dataMapper.get(channel).isLoggedIn()) {
+            case LOGIN:
+                if (!dataMapper.get(socketChannel).isLoggedIn()) {
                     if (answerParts.length != 3) {
                         String wrongArgs = "Invalid arguments for this command! Correct syntax: /login [username] [password]";
-                        sendTextBack(wrongArgs, channel);
+                        sendTextBack(wrongArgs, socketChannel);
                     } else {
                         SQLConnection sqlConnection = new SQLConnection();
-                        int response = sqlConnection.login(answerParts[1], answerParts[2]);
-                        if (response == 1) {
-                            String invalidLogin = "Invalid login! Please try again.";
-                            sendTextBack(invalidLogin, channel);
-                        } else if (response == 0) {
+                        SQLResponse response = sqlConnection.login(answerParts[1], answerParts[2]);
+                        if (response == SQLResponse.SUCCESS) {
                             String loginSuccessful = "Login successful.";
-                            sendTextBack(loginSuccessful, channel);
-                            dataMapper.get(channel).setName(answerParts[1]);
-                            dataMapper.get(channel).setLoggedIn(true);
-                            sendChatLog(channel, 100); //saadab sisselogimisel vanad sõnumid.
+                            sendTextBack(loginSuccessful, socketChannel);
+                            dataMapper.get(socketChannel).setName(answerParts[1]);
+                            dataMapper.get(socketChannel).setLoggedIn(true);
+                            sendChatLog(socketChannel, 100); //saadab sisselogimisel vanad sõnumid.
+                        } else if (response == SQLResponse.WRONGPASSWORD) {
+                            String invalidLogin = "Wrong password! Please try again.";
+                            sendTextBack(invalidLogin, socketChannel);
+                        } else if (response == SQLResponse.ERROR){
+                            String connectionError = "Error connecting to the database. Please try again later.";
+                            sendTextBack(connectionError, socketChannel);
                         }
                     }
                 } else {
                     String alreadyLoggedIn = "This account is logged in! Please /logout before logging in again.";
-                    sendTextBack(alreadyLoggedIn, channel);
+                    sendTextBack(alreadyLoggedIn, socketChannel);
                 }
                 break;
 
-            case "/logout":
+            case LOGOUT:
                 String logOut = "Logged out.";
-                sendTextBack(logOut, channel);
-                dataMapper.get(channel).setLoggedIn(false);
-                dataMapper.get(channel).setName("Default");
+                sendTextBack(logOut, socketChannel);
+                dataMapper.get(socketChannel).setLoggedIn(false);
+                dataMapper.get(socketChannel).setName("Default");
                 break;
 
-            case "/history":
-                if (dataMapper.get(channel).isLoggedIn()) {
+            case HISTORY:
+                if (dataMapper.get(socketChannel).isLoggedIn()) {
                     if (answerParts.length != 2) {
                         String wrongArgs = "You have either entered too few or too many arguments. Correct syntax: /history [amount]";
-                        sendTextBack(wrongArgs, channel);
+                        sendTextBack(wrongArgs, socketChannel);
                     } else {
                         try {
                             int amount = Integer.parseInt(answerParts[1]);
                             if (amount > 500 || amount < 0) {
                                 String tooManyMsg = "The number you have entered is either too big or too small! Please enter" +
                                         " a number between 0 and 500";
-                                sendTextBack(tooManyMsg, channel);
+                                sendTextBack(tooManyMsg, socketChannel);
                             } else {
-                                sendChatLog(channel, amount);
+                                sendChatLog(socketChannel, amount);
                             }
                         } catch (NumberFormatException e) {
                             String incorrectNum = "Incorrect number of messages to return. Please try again.";
-                            sendTextBack(incorrectNum, channel);
+                            sendTextBack(incorrectNum, socketChannel);
                         }
                     }
                 } else {
                     String loginRequest = "Please log in before requesting this command!";
-                    sendTextBack(loginRequest, channel);
+                    sendTextBack(loginRequest, socketChannel);
                 }
+
+            default:
+                String response = "Unknown command.";
+                sendTextBack(response, socketChannel);
+
         }
     }
 }

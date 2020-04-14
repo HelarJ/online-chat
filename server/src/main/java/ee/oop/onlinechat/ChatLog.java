@@ -12,7 +12,9 @@ public class ChatLog {
         this.channelName = channelName;
         this.logList = new ArrayList<>();
         this.sqlConnection = new SQLConnection();
-        //todo lisada andmebaasi protseduur, mis võtab andmebaasist kanali 100 viimast sõnumit ja paneb logListi.
+    }
+    public String getChannelName(){
+        return channelName;
     }
 
     public void logMessage(Message message){
@@ -20,7 +22,7 @@ public class ChatLog {
     }
 
     public Message[] getLastMessages(int amount){
-        logList = sqlConnection.getMessages(amount);
+        logList = sqlConnection.getMessages(amount, this.channelName);
         Message[] logArray = logList.toArray(new Message[0]);
         if (logArray.length <= amount){
             return logArray;

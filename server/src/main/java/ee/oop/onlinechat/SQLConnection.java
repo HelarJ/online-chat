@@ -32,7 +32,7 @@ public class SQLConnection {
 
     }
 
-    public int register(String kasutajaNimi, String parool){
+    public SQLResponse register(String kasutajaNimi, String parool){
         try (Connection ühendus = DriverManager.getConnection(credentials);
                 PreparedStatement stmt = ühendus.prepareStatement("CALL sp_create_user(?,?)")) {
             stmt.setString(1, kasutajaNimi);
@@ -46,19 +46,22 @@ public class SQLConnection {
                 System.out.println(e.getErrorCode());
                 System.out.println(e.getSQLState());
                 System.out.println(e.getMessage());
-                return 1;
+                if (e.getErrorCode() == 1062){ //1062 is a duplicate entry errorcode.. ehk kui kasutaja on juba andmebaasis olemas
+                    return SQLResponse.USEREXISTS;
+                }
+                return SQLResponse.ERROR;
             }
-            return 0;
+            return SQLResponse.SUCCESS;
         } catch (SQLException e) {
             System.out.println("Error connecting to the database (register).");
             System.out.println(e.getErrorCode());
             System.out.println(e.getSQLState());
             System.out.println(e.getMessage());
-            return 1;
+            return SQLResponse.ERROR;
         }
     }
 
-    public int login(String kasutajaNimi, String s_parool) {
+    public SQLResponse login(String kasutajaNimi, String s_parool) {
         try (Connection ühendus = DriverManager.getConnection(credentials);
                 PreparedStatement stmt = ühendus.prepareStatement("CALL sp_login(?)")) {
             stmt.setString(1, kasutajaNimi);
@@ -69,22 +72,24 @@ public class SQLConnection {
                 String Token = rs.getString("parool");
 
                 if (BCrypt.checkpw(s_parool, Token)) {
-                    return 0;
+                    return SQLResponse.SUCCESS;
+                } else {
+                    return SQLResponse.WRONGPASSWORD;
                 }
             } catch (SQLException e) {
                 System.out.println("Error logging in user.");
                 System.out.println(e.getErrorCode());
                 System.out.println(e.getSQLState());
                 System.out.println(e.getMessage());
+                return SQLResponse.ERROR;
 
             }
-            return 1;
         } catch (SQLException e) {
             System.out.println("Error connecting to the database (login).");
             System.out.println(e.getErrorCode());
             System.out.println(e.getSQLState());
             System.out.println(e.getMessage());
-            return 1;
+            return SQLResponse.ERROR;
         }
     }
 
@@ -104,15 +109,18 @@ public class SQLConnection {
         }
     }
 
-    public ArrayList<Message> getMessages(int amount) {
+    public ArrayList<Message> getMessages(int amount, String channelName) {
         ArrayList<Message> messageList = new ArrayList<>();
         try (Connection ühendus = DriverManager.getConnection(credentials);
-                PreparedStatement stmt = ühendus.prepareStatement("CALL sp_get_n_recent_messages(?)")) {
+                PreparedStatement stmt = ühendus.prepareStatement("CALL sp_get_n_recent_messages(?, ?)")) {
             stmt.setInt(1, amount);
+            stmt.setString(2, channelName);
             ResultSet resultSet = stmt.executeQuery();
             while (resultSet.next()) {
-                Message message = new Message(resultSet.getString("username"),
-                        resultSet.getString("message"), resultSet.getString("timestamp"));
+                Message message = new Message(resultSet.getString("channel"),
+                        resultSet.getString("username"),
+                        resultSet.getString("message"),
+                        resultSet.getString("timestamp"));
                 messageList.add(message);
             }
 

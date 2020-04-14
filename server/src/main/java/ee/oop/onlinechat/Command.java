@@ -7,4 +7,6 @@ public enum Command {
     LOGOUT,
     HISTORY,
     CREATECHANNEL,
+    JOINCHANNEL,
+    SEND,
 }

@@ -5,6 +5,7 @@ import org.springframework.security.crypto.bcrypt.BCrypt;
 import java.io.*;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Properties;
 
 /**
@@ -32,14 +33,26 @@ public class SQLConnection {
 
     }
 
-    public SQLResponse register(String kasutajaNimi, String parool){
+    public SQLResponse register(String kasutajaNimi, String parool, Command registerType){
+        String statementStr;
+        if (registerType == Command.REGISTER){
+            statementStr = "CALL sp_create_user(?,?)";
+        } else if (registerType == Command.CREATECHANNEL){
+            statementStr = "CALL sp_create_channel(?,?)";
+        } else {
+            return SQLResponse.ERROR;
+        }
         try (Connection ühendus = DriverManager.getConnection(credentials);
-                PreparedStatement stmt = ühendus.prepareStatement("CALL sp_create_user(?,?)")) {
+                PreparedStatement stmt = ühendus.prepareStatement(statementStr)) {
             stmt.setString(1, kasutajaNimi);
 
             try {
-                String turvalineParool = BCrypt.hashpw(parool, BCrypt.gensalt());
-                stmt.setString(2, turvalineParool);
+                if (registerType == Command.CREATECHANNEL && parool == null){ //kui tegu on kanali registreeringuga siis on võimalik et parooli ei ole.
+                    stmt.setNull(2, java.sql.Types.NULL);
+                } else {
+                    String turvalineParool = BCrypt.hashpw(parool, BCrypt.gensalt());
+                    stmt.setString(2, turvalineParool);
+                }
                 stmt.executeQuery();
             } catch (SQLException e) {
                 System.out.println("Error registering for an account.");
@@ -47,7 +60,7 @@ public class SQLConnection {
                 System.out.println(e.getSQLState());
                 System.out.println(e.getMessage());
                 if (e.getErrorCode() == 1062){ //1062 is a duplicate entry errorcode.. ehk kui kasutaja on juba andmebaasis olemas
-                    return SQLResponse.USEREXISTS;
+                    return SQLResponse.DUPLICATE;
                 }
                 return SQLResponse.ERROR;
             }
@@ -61,15 +74,27 @@ public class SQLConnection {
         }
     }
 
-    public SQLResponse login(String kasutajaNimi, String s_parool) {
+    public SQLResponse login(String kasutajaNimi, String s_parool, Command loginType) {
+        String statementStr;
+        if (loginType == Command.LOGIN){
+            statementStr = "CALL sp_login(?)";
+        } else if (loginType == Command.JOINCHANNEL){
+            statementStr = "CALL sp_join_channel(?)";
+        } else {
+            return SQLResponse.ERROR;
+        }
         try (Connection ühendus = DriverManager.getConnection(credentials);
-                PreparedStatement stmt = ühendus.prepareStatement("CALL sp_login(?)")) {
+                PreparedStatement stmt = ühendus.prepareStatement(statementStr)) {
             stmt.setString(1, kasutajaNimi);
 
             try {
                 ResultSet rs = stmt.executeQuery();
                 rs.next();
                 String Token = rs.getString("parool");
+
+                if (loginType == Command.JOINCHANNEL && Token == null){ //Paroolita kanaliga ühinemisel saab anmebaasist null väärtuse.
+                    return SQLResponse.SUCCESS;
+                }
 
                 if (BCrypt.checkpw(s_parool, Token)) {
                     return SQLResponse.SUCCESS;
@@ -131,5 +156,22 @@ public class SQLConnection {
             System.out.println(e.getMessage());
         }
         return messageList;
+    }
+
+    public List<String> getChannels(){
+        List<String> channelList = new ArrayList<>();
+        try (Connection ühendus = DriverManager.getConnection(credentials);
+             PreparedStatement stmt = ühendus.prepareStatement("CALL sp_get_channel_list()")) {
+             ResultSet resultSet = stmt.executeQuery();
+            while (resultSet.next()) {
+                channelList.add(resultSet.getString("nimi"));
+            }
+        } catch (SQLException e){
+            System.out.println("Error connecting to the database (getChannels).");
+            System.out.println(e.getErrorCode());
+            System.out.println(e.getSQLState());
+            System.out.println(e.getMessage());
+        }
+        return channelList;
     }
 }

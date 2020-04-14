@@ -1,12 +1,9 @@
 package ee.oop.onlinechat;
 
-import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
-import java.time.temporal.ChronoUnit;
-import java.time.temporal.Temporal;
-import java.util.Locale;
+
 
 public class Message {
     private String username;
@@ -41,6 +38,6 @@ public class Message {
 
     @Override
     public String toString() {
-        return ("["+(timestamp)+"] "+username+": " + message);
+        return String.format("[%s] #%s %s: %s", timestamp, channelName, username, message);
     }
 }

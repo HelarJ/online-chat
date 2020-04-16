@@ -13,13 +13,14 @@ public class ChatLog {
         this.logList = new ArrayList<>();
         this.sqlConnection = new SQLConnection();
         logList = sqlConnection.getMessages(100, this.channelName);
-        System.out.println(". Loaded "+logList.size()+" messages from db.");
+        Server.logger.info("Loaded "+logList.size()+" messages for "+channelName+" from db.");
     }
     public String getChannelName(){
         return channelName;
     }
 
     public void logMessage(Message message){
+        logList.add(message);
         sqlConnection.logMessage(channelName, message);
     }
 

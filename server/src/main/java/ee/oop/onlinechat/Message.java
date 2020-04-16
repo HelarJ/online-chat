@@ -1,8 +1,10 @@
 package ee.oop.onlinechat;
 
+import java.text.SimpleDateFormat;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.time.format.FormatStyle;
+import java.util.Date;
 
 
 public class Message {
@@ -15,8 +17,9 @@ public class Message {
         this.channelName = channelName;
         this.username = username;
         this.message = message;
-        DateTimeFormatter formatter = DateTimeFormatter.ofLocalizedDateTime(FormatStyle.SHORT).withZone(ZoneId.systemDefault());
-        this.timestamp = formatter.format(java.time.Instant.now());
+        Date date = new Date();
+        SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        this.timestamp = dateFormat.format(date);
     }
 
     public Message(String channelName, String username, String message, String timestamp) {

@@ -2,9 +2,12 @@ package ee.oop.onlinechat;
 
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
-import java.io.*;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.sql.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Properties;
 
@@ -23,14 +26,12 @@ public class SQLConnection {
             this.credentials = ("jdbc:mysql://" + prop.get("db.ip") + ":" + prop.get("db.port") + "/" + prop.get("db.name") + "?" +
                     "user=" + prop.get("db.username") + "&password=" + prop.get("db.password"));
         } catch (FileNotFoundException e) {
-            System.out.println("Config file not found for database.");
-            System.out.println(e.getMessage());
+            Server.logger.severe("Config file not found for database.");
+            Server.logger.severe(e.getMessage());
         } catch (IOException e) {
-            System.out.println("Error reading properties from config file");
-            System.out.println(e.getMessage());
+            Server.logger.severe("Error reading properties from config file.");
+            Server.logger.severe(e.getMessage());
         }
-
-
     }
 
     public SQLResponse register(String kasutajaNimi, String parool, Command registerType){
@@ -55,21 +56,17 @@ public class SQLConnection {
                 }
                 stmt.executeQuery();
             } catch (SQLException e) {
-                System.out.println("Error registering for an account.");
-                System.out.println(e.getErrorCode());
-                System.out.println(e.getSQLState());
-                System.out.println(e.getMessage());
                 if (e.getErrorCode() == 1062){ //1062 is a duplicate entry errorcode.. ehk kui kasutaja on juba andmebaasis olemas
                     return SQLResponse.DUPLICATE;
                 }
+                Server.logger.severe("Unexpected error while registering a user/channel.");
+                Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
                 return SQLResponse.ERROR;
             }
             return SQLResponse.SUCCESS;
         } catch (SQLException e) {
-            System.out.println("Error connecting to the database (register).");
-            System.out.println(e.getErrorCode());
-            System.out.println(e.getSQLState());
-            System.out.println(e.getMessage());
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
             return SQLResponse.ERROR;
         }
     }
@@ -102,18 +99,17 @@ public class SQLConnection {
                     return SQLResponse.WRONGPASSWORD;
                 }
             } catch (SQLException e) {
-                System.out.println("Error logging in user.");
-                System.out.println(e.getErrorCode());
-                System.out.println(e.getSQLState());
-                System.out.println(e.getMessage());
+                if (e.getErrorCode() == 0){
+                    return SQLResponse.DOESNOTEXIST;
+                }
+                Server.logger.severe("Unexpected error while logging in.");
+                Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
                 return SQLResponse.ERROR;
 
             }
         } catch (SQLException e) {
-            System.out.println("Error connecting to the database (login).");
-            System.out.println(e.getErrorCode());
-            System.out.println(e.getSQLState());
-            System.out.println(e.getMessage());
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
             return SQLResponse.ERROR;
         }
     }
@@ -127,10 +123,8 @@ public class SQLConnection {
             stmt.executeUpdate();
 
         } catch (SQLException e){
-            System.out.println("Error connecting to the database (logMessage).");
-            System.out.println(e.getErrorCode());
-            System.out.println(e.getSQLState());
-            System.out.println(e.getMessage());
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
         }
     }
 
@@ -150,11 +144,10 @@ public class SQLConnection {
             }
 
         } catch (SQLException e){
-            System.out.println("Error connecting to the database (getMessage).");
-            System.out.println(e.getErrorCode());
-            System.out.println(e.getSQLState());
-            System.out.println(e.getMessage());
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
         }
+        Collections.reverse(messageList);
         return messageList;
     }
 
@@ -167,10 +160,8 @@ public class SQLConnection {
                 channelList.add(resultSet.getString("nimi"));
             }
         } catch (SQLException e){
-            System.out.println("Error connecting to the database (getChannels).");
-            System.out.println(e.getErrorCode());
-            System.out.println(e.getSQLState());
-            System.out.println(e.getMessage());
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
         }
         return channelList;
     }

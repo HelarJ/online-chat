@@ -4,9 +4,9 @@ import java.util.HashSet;
 import java.util.Set;
 
 public class ClientInfo {
-    String name;
-    Boolean loggedIn;
-    Set<String> joinedChannels;
+    private String name;
+    private Boolean loggedIn;
+    private Set<String> joinedChannels;
 
     public ClientInfo() {
         this.name = "Default";

@@ -3,6 +3,7 @@ package ee.oop.onlinechat;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class Saatja implements Runnable {
@@ -19,7 +20,7 @@ public class Saatja implements Runnable {
         String message = in.nextLine();
         while (!message.equals("/exit")) {
 
-            byte[] mBytes = message.getBytes();
+            byte[] mBytes = message.getBytes(StandardCharsets.UTF_8);
             ByteBuffer byteBuffer = ByteBuffer.wrap(mBytes);
             try {
                 client.write(byteBuffer);

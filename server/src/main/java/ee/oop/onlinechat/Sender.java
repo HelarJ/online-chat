@@ -3,6 +3,7 @@ package ee.oop.onlinechat;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 import java.util.Map;
 
 public class Sender {
@@ -18,16 +19,17 @@ public class Sender {
         Message msg = new Message(channelName, saatja.getName(), text);
         chatLogHandler.logMessage(channelName, msg);
         String msgToSend = msg.toString();
-        byte[] bytes = msgToSend.getBytes();
+        byte[] bytes = msgToSend.getBytes(StandardCharsets.UTF_8);
         ByteBuffer data = ByteBuffer.wrap(bytes);
+        Server.logger.info(String.format("Sending: %s to connected clients", new String(data.array())));
         socketClientMap.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
             try {
                 if (d.isInChannel(channelName)){ //saadab ühendusele ainult siis kui ta on kanalis.
                     c.write(data);
-                    System.out.printf("Sent: %s to %s%n at %s%n", new String(data.array()), d.getName(), c.getRemoteAddress());
+                    Server.logger.info(String.format("Sent: \"%s\" to %s at %s", new String(data.array()), socketClientMap.get(c).getName(), c.getRemoteAddress()));
                 }
             } catch (IOException e) {
-                System.out.println("Error sending to channel: " + e.getMessage());
+                Server.logger.severe("Error sending to channel: " + e.getMessage());
             } finally {
                 data.rewind();
             }
@@ -35,13 +37,13 @@ public class Sender {
     }
 
     public void sendTextBack(String text, SocketChannel c) {
-        byte[] tekstBytes = text.getBytes();
+        byte[] tekstBytes = text.getBytes(StandardCharsets.UTF_8);
         ByteBuffer data = ByteBuffer.wrap(tekstBytes);
         try {
             c.write(data);
-            System.out.printf("Sent: %s to %s%n at %s%n", new String(data.array()), socketClientMap.get(c).getName(), c.getRemoteAddress());
+            Server.logger.info(String.format("Sent: \"%s\" to %s at %s", new String(data.array()), socketClientMap.get(c).getName(), c.getRemoteAddress()));
         } catch (IOException e) {
-            System.out.println("Error sending to channel: " + e.getMessage());
+            Server.logger.severe("Error sending to channel: " + e.getMessage());
         } finally {
             data.rewind();
         }

@@ -9,7 +9,11 @@ import java.nio.channels.SelectionKey;
 import java.nio.channels.Selector;
 import java.nio.channels.ServerSocketChannel;
 import java.nio.channels.SocketChannel;
-import java.util.*;
+import java.nio.charset.StandardCharsets;
+import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Map;
+import java.util.Scanner;
 
 public class Ühendus {
     private Selector selector;
@@ -31,7 +35,8 @@ public class Ühendus {
 
         serverChannel.socket().bind(listenAddress);
         serverChannel.register(this.selector, SelectionKey.OP_ACCEPT);
-        System.out.println("Server started...");
+        Server.logger.info("Server started...");
+
         Runnable sulgeja = () -> {
             Scanner sc = new Scanner(System.in);
             String command = "";
@@ -58,6 +63,10 @@ public class Ühendus {
                 }
             }
         }
+        Server.logger.severe("Server main loop has ended.");
+        this.selector.close();
+        serverChannel.close();
+
     }
 
     private void accept(SelectionKey key) throws IOException {
@@ -66,7 +75,7 @@ public class Ühendus {
         channel.configureBlocking(false);
         Socket socket = channel.socket();
         SocketAddress remoteAddr = socket.getRemoteSocketAddress();
-        System.out.println("Connected to: " + remoteAddr);
+        Server.logger.info("Connected to: " + remoteAddr);
         String greeting = "Welcome to blablaChat! To start chatting, please /register [username] [password] or /login [username] [password]!";
         socketClientMap.put(channel, new ClientInfo()); //jätab alguses channeli meelde koos default nimega.
         channel.register(this.selector, SelectionKey.OP_READ);
@@ -98,7 +107,7 @@ public class Ühendus {
         } catch (IOException e) {
             socketClientMap.get(socketChannel).setLoggedIn(false);
             this.socketClientMap.remove(socketChannel);
-            System.out.printf("Connection closed by client: %s%n", s.getRemoteSocketAddress());
+            Server.logger.info("Connection closed by client: "+ s.getRemoteSocketAddress());
             socketChannel.close();
             key.cancel();
         }

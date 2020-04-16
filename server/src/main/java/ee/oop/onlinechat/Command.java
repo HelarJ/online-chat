@@ -8,5 +8,6 @@ public enum Command {
     HISTORY,
     CREATECHANNEL,
     JOINCHANNEL,
+    LEAVECHANNEL,
     SEND,
 }

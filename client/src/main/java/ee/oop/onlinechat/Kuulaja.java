@@ -3,6 +3,7 @@ package ee.oop.onlinechat;
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
 
 public class Kuulaja implements Runnable {
     private SocketChannel client;
@@ -26,7 +27,7 @@ public class Kuulaja implements Runnable {
             }
             byte[] data = new byte[count];
             System.arraycopy(byteBuffer.array(), 0, data, 0, count); //loob buffrist arv suurusega array
-            System.out.println(new String(data));
+            System.out.println(new String(data, StandardCharsets.UTF_8));
             byteBuffer.clear();
         }
         System.out.println("Closed client.");

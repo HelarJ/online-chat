@@ -1,5 +1,6 @@
 package ee.oop.onlinechat;
 
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.Socket;
@@ -85,15 +86,18 @@ public class Ühendus {
     private void read(SelectionKey key) throws IOException {
         SocketChannel socketChannel = (SocketChannel) key.channel();
         Socket s = socketChannel.socket();
-        ByteBuffer buffer = ByteBuffer.allocate(1024);
+        ByteBuffer buffer = ByteBuffer.allocate(256);
+        ByteArrayOutputStream bos = new ByteArrayOutputStream();
         int count;
-        byte[] data;
         try {
-            count = socketChannel.read(buffer);
-            data = new byte[count];
-            System.arraycopy(buffer.array(), 0, data, 0, count);
-            String vastus = new String(data);
-            System.out.println("Got: " + vastus);
+            while ((count = socketChannel.read(buffer))>0){
+                byte[] data = new byte[count];
+                System.arraycopy(buffer.array(), 0, data, 0, count);
+                bos.writeBytes(data);
+                buffer.clear();
+            }
+            String vastus = new String(bos.toByteArray(), StandardCharsets.UTF_8);
+            Server.logger.info("Got: " + vastus + " from "+socketChannel.getRemoteAddress());
 
             if (vastus.substring(0, 1).equals("/")) { // kui oli command
                 CommandHandler commandHandler = new CommandHandler(socketClientMap.get(socketChannel), socketChannel, sender); //handler saab clientinfo, socketChanneli ja sender objekti mida kasutada.

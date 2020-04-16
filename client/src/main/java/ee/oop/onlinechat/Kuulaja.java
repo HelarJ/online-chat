@@ -1,34 +1,33 @@
 package ee.oop.onlinechat;
 
+import java.io.BufferedReader;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import java.io.InputStreamReader;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 
 public class Kuulaja implements Runnable {
-    private SocketChannel client;
+    private BufferedReader bufferedReader;
 
-    public Kuulaja(SocketChannel client) {
-        this.client = client;
+    public Kuulaja(Socket socket) throws IOException {
+        this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
     }
 
     @Override
     public void run() {
         System.out.println("Started listening...");
-        ByteBuffer byteBuffer = ByteBuffer.allocate(1024);
         while(true){
-            int count;
+            String output;
             try {
-                count = client.read(byteBuffer);
+                while ((output = bufferedReader.readLine())!=null){
+                    System.out.println(output);
+                }
 
             } catch (IOException e) {
                 System.out.println("Connection is closed.");
                 break;
             }
-            byte[] data = new byte[count];
-            System.arraycopy(byteBuffer.array(), 0, data, 0, count); //loob buffrist arv suurusega array
-            System.out.println(new String(data, StandardCharsets.UTF_8));
-            byteBuffer.clear();
+
         }
         System.out.println("Closed client.");
         System.exit(1);

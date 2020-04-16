@@ -1,38 +1,38 @@
 package ee.oop.onlinechat;
 
+import java.io.BufferedWriter;
 import java.io.IOException;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
+import java.io.OutputStreamWriter;
+import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class Saatja implements Runnable {
-    SocketChannel client;
+    Socket socket;
+    BufferedWriter bufferedWriter;
 
-    public Saatja(SocketChannel client) {
-        this.client = client;
+    public Saatja(Socket socket) throws IOException {
+        this.socket = socket;
+        this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
     }
 
     @Override
     public void run() {
         System.out.println("Waiting for input...");
-        Scanner in = new Scanner(System.in);
+        Scanner in = new Scanner(System.in, StandardCharsets.UTF_8);
         String message = in.nextLine();
         while (!message.equals("/exit")) {
-
-            byte[] mBytes = message.getBytes(StandardCharsets.UTF_8);
-            ByteBuffer byteBuffer = ByteBuffer.wrap(mBytes);
             try {
-                client.write(byteBuffer);
+                bufferedWriter.write(message);
+                bufferedWriter.flush();
             } catch (IOException e) {
                 System.out.println("Error writing: ");
                 System.out.println(e.getMessage());
             }
-            byteBuffer.clear();
             message = in.nextLine();
         }
         try {
-            client.close();
+            socket.close();
         } catch (IOException e) {
             System.out.println("Couldn't close the client.");
             System.out.println(e.getMessage());

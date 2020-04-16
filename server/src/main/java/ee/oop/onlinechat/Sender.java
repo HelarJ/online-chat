@@ -19,9 +19,12 @@ public class Sender {
         Message msg = new Message(channelName, saatja.getName(), text);
         chatLogHandler.logMessage(channelName, msg);
         String msgToSend = msg.toString();
+        if (!msgToSend.endsWith("\r\n")){ //et client teaks, millal rida otsa saab, peavad sõnumid lõppema uue rea märkidega.
+            msgToSend=msgToSend.stripTrailing() + "\r\n";
+        }
         byte[] bytes = msgToSend.getBytes(StandardCharsets.UTF_8);
         ByteBuffer data = ByteBuffer.wrap(bytes);
-        Server.logger.info(String.format("Sending: %s to connected clients", new String(data.array())));
+        Server.logger.info(String.format("Sending: %s to connected clients", msgToSend.stripTrailing()));
         socketClientMap.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
             try {
                 if (d.isInChannel(channelName)){ //saadab ühendusele ainult siis kui ta on kanalis.
@@ -37,11 +40,14 @@ public class Sender {
     }
 
     public void sendTextBack(String text, SocketChannel c) {
+        if (!text.endsWith("\r\n")){
+            text=text.stripTrailing() + "\r\n";
+        }
         byte[] tekstBytes = text.getBytes(StandardCharsets.UTF_8);
         ByteBuffer data = ByteBuffer.wrap(tekstBytes);
         try {
             c.write(data);
-            Server.logger.info(String.format("Sent: \"%s\" to %s at %s", new String(data.array()), socketClientMap.get(c).getName(), c.getRemoteAddress()));
+            Server.logger.info(String.format("Sent: \"%s\" to %s at %s", text.stripTrailing(), socketClientMap.get(c).getName(), c.getRemoteAddress()));
         } catch (IOException e) {
             Server.logger.severe("Error sending to channel: " + e.getMessage());
         } finally {

@@ -89,7 +89,7 @@ public class SQLConnection {
                 rs.next();
                 String Token = rs.getString("parool");
 
-                if (loginType == Command.JOINCHANNEL && Token == null){ //Paroolita kanaliga ühinemisel saab anmebaasist null väärtuse.
+                if (loginType == Command.JOINCHANNEL && Token == null){ //Paroolita kanaliga ühinemisel saab andmebaasist null väärtuse.
                     return SQLResponse.SUCCESS;
                 }
 
@@ -164,5 +164,49 @@ public class SQLConnection {
             Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
         }
         return channelList;
+    }
+
+    public List<String> getJoinedChannels(String user) {
+        List<String> channelList = new ArrayList<>();
+        try (Connection ühendus = DriverManager.getConnection(credentials);
+             PreparedStatement stmt = ühendus.prepareStatement("CALL sp_get_joined_channels(?)")) {
+            stmt.setString(1, user);
+            ResultSet resultSet = stmt.executeQuery();
+            while (resultSet.next()) {
+                channelList.add(resultSet.getString("nimi"));
+            }
+        } catch (SQLException e){
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+        }
+        return channelList;
+    }
+
+    public SQLResponse addUserToChannel(String clientName, String channelName) {
+        try (Connection ühendus = DriverManager.getConnection(credentials);
+             PreparedStatement userCreate = ühendus.prepareStatement("CALL sp_add_user_to_channel(?,?)")) {
+            userCreate.setString(1,channelName);
+            userCreate.setString(2,clientName);
+            userCreate.executeQuery();
+            return SQLResponse.SUCCESS;
+        } catch (SQLException e) {
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            return SQLResponse.ERROR;
+        }
+    }
+
+    public SQLResponse removeUserFromChannel(String clientName, String channelName) {
+        try (Connection ühendus = DriverManager.getConnection(credentials);
+             PreparedStatement userDelete = ühendus.prepareStatement("CALL sp_remove_user_from_channel(?,?)")) {
+            userDelete.setString(1,channelName);
+            userDelete.setString(2,clientName);
+            userDelete.executeQuery();
+            return SQLResponse.SUCCESS;
+        } catch (SQLException e) {
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            return SQLResponse.ERROR;
+        }
     }
 }

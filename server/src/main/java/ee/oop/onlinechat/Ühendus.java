@@ -90,33 +90,44 @@ public class Ühendus {
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         int count;
         try {
-            while ((count = socketChannel.read(buffer))>0){
+            while ((count = socketChannel.read(buffer)) > 0) {
                 byte[] data = new byte[count];
                 System.arraycopy(buffer.array(), 0, data, 0, count);
                 bos.writeBytes(data);
                 buffer.clear();
             }
             String vastus = new String(bos.toByteArray(), StandardCharsets.UTF_8);
-            Server.logger.info("Got: " + vastus + " from "+socketChannel.getRemoteAddress());
-
-            if (vastus.substring(0, 1).equals("/")) { // kui oli command
-                CommandHandler commandHandler = new CommandHandler(socketClientMap.get(socketChannel), socketChannel, sender); //handler saab clientinfo, socketChanneli ja sender objekti mida kasutada.
-                commandHandler.handleCommand(vastus);
-            } else if (socketClientMap.get(socketChannel).isLoggedIn()) { // kasutaja on sisse logitud
-                sender.sendMsgWithSenderToChannel("Main", socketClientMap.get(socketChannel), vastus);
-            } else { // kasutaja pole sisse logitud
-                String loginRequest = "Please log in or create an account before sending messages with /register [username] [password]!";
-                sender.sendTextBack(loginRequest, socketChannel);
+            Server.logger.info("Got: " + vastus + " from " + socketChannel.getRemoteAddress());
+            try {
+                if (vastus.substring(0, 1).equals("/")) { // kui oli command
+                    CommandHandler commandHandler = new CommandHandler(socketClientMap.get(socketChannel), socketChannel, sender); //handler saab clientinfo, socketChanneli ja sender objekti mida kasutada.
+                    commandHandler.handleCommand(vastus);
+                } else if (socketClientMap.get(socketChannel).isLoggedIn()) { // kasutaja on sisse logitud
+                    if (vastus.length() < 256) { // kui vastus on alla teatud lubatud suuruse
+                        sender.sendMsgWithSenderToChannel("Main", socketClientMap.get(socketChannel), vastus);
+                    } else {
+                        String tooLongMsg = "The message you have entered contains too many characters. Please keep it under 256 characters.";
+                        sender.sendTextBack(tooLongMsg, socketChannel);
+                    }
+                } else { // kasutaja pole sisse logitud
+                    String loginRequest = "Please log in or create an account before sending messages with /register [username] [password]!";
+                    sender.sendTextBack(loginRequest, socketChannel);
+                }
+            } catch (StringIndexOutOfBoundsException e) { // See exception visatakse, kui command oli /exit ja ühendus sulgetakse enne sõne töötlemist.
+                Server.logger.info(String.format("Client %s closed client-side connection.", socketClientMap.get(socketChannel).getName()));
+                socketClientMap.get(socketChannel).setLoggedIn(false);
+                this.socketClientMap.remove(socketChannel);
+                socketChannel.close();
+                key.cancel();
             }
         } catch (IOException e) {
             socketClientMap.get(socketChannel).setLoggedIn(false);
             this.socketClientMap.remove(socketChannel);
-            Server.logger.info("Connection closed by client: "+ s.getRemoteSocketAddress());
+            Server.logger.info("Connection closed by client: " + s.getRemoteSocketAddress());
             socketChannel.close();
             key.cancel();
         }
     }
-
 
 
 }

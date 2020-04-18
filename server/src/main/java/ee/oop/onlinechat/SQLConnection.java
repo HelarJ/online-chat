@@ -34,21 +34,21 @@ public class SQLConnection {
         }
     }
 
-    public SQLResponse register(String kasutajaNimi, String parool, Command registerType){
+    public SQLResponse register(String kasutajaNimi, String parool, Command registerType) {
         String statementStr;
-        if (registerType == Command.REGISTER){
+        if (registerType == Command.REGISTER) {
             statementStr = "CALL sp_create_user(?,?)";
-        } else if (registerType == Command.CREATECHANNEL){
+        } else if (registerType == Command.CREATECHANNEL) {
             statementStr = "CALL sp_create_channel(?,?)";
         } else {
             return SQLResponse.ERROR;
         }
         try (Connection ühendus = DriverManager.getConnection(credentials);
-                PreparedStatement stmt = ühendus.prepareStatement(statementStr)) {
+             PreparedStatement stmt = ühendus.prepareStatement(statementStr)) {
             stmt.setString(1, kasutajaNimi);
 
             try {
-                if (registerType == Command.CREATECHANNEL && parool == null){ //kui tegu on kanali registreeringuga siis on võimalik et parooli ei ole.
+                if (registerType == Command.CREATECHANNEL && parool == null) { //kui tegu on kanali registreeringuga siis on võimalik et parooli ei ole.
                     stmt.setNull(2, java.sql.Types.NULL);
                 } else {
                     String turvalineParool = BCrypt.hashpw(parool, BCrypt.gensalt());
@@ -56,32 +56,32 @@ public class SQLConnection {
                 }
                 stmt.executeQuery();
             } catch (SQLException e) {
-                if (e.getErrorCode() == 1062){ //1062 is a duplicate entry errorcode.. ehk kui kasutaja on juba andmebaasis olemas
+                if (e.getErrorCode() == 1062 || e.getErrorCode() == 1305) { //1062 & 1305 are duplicate entry errorcodes.. ehk kui kasutaja või channel on juba andmebaasis olemas.
                     return SQLResponse.DUPLICATE;
                 }
                 Server.logger.severe("Unexpected error while registering a user/channel.");
-                Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+                Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
                 return SQLResponse.ERROR;
             }
             return SQLResponse.SUCCESS;
         } catch (SQLException e) {
             Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
             return SQLResponse.ERROR;
         }
     }
 
     public SQLResponse login(String kasutajaNimi, String s_parool, Command loginType) {
         String statementStr;
-        if (loginType == Command.LOGIN){
+        if (loginType == Command.LOGIN) {
             statementStr = "CALL sp_login(?)";
-        } else if (loginType == Command.JOINCHANNEL){
+        } else if (loginType == Command.JOINCHANNEL) {
             statementStr = "CALL sp_join_channel(?)";
         } else {
             return SQLResponse.ERROR;
         }
         try (Connection ühendus = DriverManager.getConnection(credentials);
-                PreparedStatement stmt = ühendus.prepareStatement(statementStr)) {
+             PreparedStatement stmt = ühendus.prepareStatement(statementStr)) {
             stmt.setString(1, kasutajaNimi);
 
             try {
@@ -89,7 +89,7 @@ public class SQLConnection {
                 rs.next();
                 String Token = rs.getString("parool");
 
-                if (loginType == Command.JOINCHANNEL && Token == null){ //Paroolita kanaliga ühinemisel saab andmebaasist null väärtuse.
+                if (loginType == Command.JOINCHANNEL && Token == null) { //Paroolita kanaliga ühinemisel saab andmebaasist null väärtuse.
                     return SQLResponse.SUCCESS;
                 }
 
@@ -99,39 +99,39 @@ public class SQLConnection {
                     return SQLResponse.WRONGPASSWORD;
                 }
             } catch (SQLException e) {
-                if (e.getErrorCode() == 0){
+                if (e.getErrorCode() == 0) {
                     return SQLResponse.DOESNOTEXIST;
                 }
                 Server.logger.severe("Unexpected error while logging in.");
-                Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+                Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
                 return SQLResponse.ERROR;
 
             }
         } catch (SQLException e) {
             Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
             return SQLResponse.ERROR;
         }
     }
 
-    public void logMessage(String channelName, Message msg){
+    public void logMessage(String channelName, Message msg) {
         try (Connection ühendus = DriverManager.getConnection(credentials);
-                PreparedStatement stmt = ühendus.prepareStatement("CALL sp_log_message(?,?,?)")) {
+             PreparedStatement stmt = ühendus.prepareStatement("CALL sp_log_message(?,?,?)")) {
             stmt.setString(1, channelName);
             stmt.setString(2, msg.getUsername());
             stmt.setString(3, msg.getMessage());
             stmt.executeUpdate();
 
-        } catch (SQLException e){
+        } catch (SQLException e) {
             Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
     }
 
     public ArrayList<Message> getMessages(int amount, String channelName) {
         ArrayList<Message> messageList = new ArrayList<>();
         try (Connection ühendus = DriverManager.getConnection(credentials);
-                PreparedStatement stmt = ühendus.prepareStatement("CALL sp_get_n_recent_messages(?, ?)")) {
+             PreparedStatement stmt = ühendus.prepareStatement("CALL sp_get_n_recent_messages(?, ?)")) {
             stmt.setInt(1, amount);
             stmt.setString(2, channelName);
             ResultSet resultSet = stmt.executeQuery();
@@ -143,25 +143,25 @@ public class SQLConnection {
                 messageList.add(message);
             }
 
-        } catch (SQLException e){
+        } catch (SQLException e) {
             Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
         Collections.reverse(messageList);
         return messageList;
     }
 
-    public List<String> getChannels(){
+    public List<String> getChannels() {
         List<String> channelList = new ArrayList<>();
         try (Connection ühendus = DriverManager.getConnection(credentials);
              PreparedStatement stmt = ühendus.prepareStatement("CALL sp_get_channel_list()")) {
-             ResultSet resultSet = stmt.executeQuery();
+            ResultSet resultSet = stmt.executeQuery();
             while (resultSet.next()) {
                 channelList.add(resultSet.getString("nimi"));
             }
-        } catch (SQLException e){
+        } catch (SQLException e) {
             Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
         return channelList;
     }
@@ -175,23 +175,39 @@ public class SQLConnection {
             while (resultSet.next()) {
                 channelList.add(resultSet.getString("nimi"));
             }
-        } catch (SQLException e){
+        } catch (SQLException e) {
             Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
         return channelList;
     }
 
+    public boolean isUserChannel(String channelName) {
+        try (Connection ühendus = DriverManager.getConnection(credentials);
+             PreparedStatement stmt = ühendus.prepareStatement("CALL sp_is_user_channel(?)")) {
+            stmt.setString(1, channelName);
+            ResultSet resultSet = stmt.executeQuery();
+            resultSet.next();
+            int vastus = resultSet.getInt("onKasutaja");
+            return vastus == 1;
+        } catch (SQLException e) {
+            Server.logger.severe("Error connecting to the database.");
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+        }
+        return false;
+    }
+
+
     public SQLResponse addUserToChannel(String clientName, String channelName) {
         try (Connection ühendus = DriverManager.getConnection(credentials);
              PreparedStatement userCreate = ühendus.prepareStatement("CALL sp_add_user_to_channel(?,?)")) {
-            userCreate.setString(1,channelName);
-            userCreate.setString(2,clientName);
+            userCreate.setString(1, channelName);
+            userCreate.setString(2, clientName);
             userCreate.executeQuery();
             return SQLResponse.SUCCESS;
         } catch (SQLException e) {
             Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
             return SQLResponse.ERROR;
         }
     }
@@ -199,13 +215,13 @@ public class SQLConnection {
     public SQLResponse removeUserFromChannel(String clientName, String channelName) {
         try (Connection ühendus = DriverManager.getConnection(credentials);
              PreparedStatement userDelete = ühendus.prepareStatement("CALL sp_remove_user_from_channel(?,?)")) {
-            userDelete.setString(1,channelName);
-            userDelete.setString(2,clientName);
+            userDelete.setString(1, channelName);
+            userDelete.setString(2, clientName);
             userDelete.executeQuery();
             return SQLResponse.SUCCESS;
         } catch (SQLException e) {
             Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " +e.getErrorCode()+", Message: "+e.getMessage());
+            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
             return SQLResponse.ERROR;
         }
     }

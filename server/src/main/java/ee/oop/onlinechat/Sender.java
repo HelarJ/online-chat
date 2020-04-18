@@ -15,19 +15,20 @@ public class Sender {
         this.socketClientMap = socketClientMap;
         this.chatLogHandler = new ChatLogHandler();
     }
+
     public void sendMsgWithSenderToChannel(String channelName, ClientInfo saatja, String text) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
         Message msg = new Message(channelName, saatja.getName(), text);
         chatLogHandler.logMessage(channelName, msg);
         String msgToSend = msg.toString();
-        if (!msgToSend.endsWith("\r\n")){ //et client teaks, millal rida otsa saab, peavad sõnumid lõppema uue rea märkidega.
-            msgToSend=msgToSend.stripTrailing() + "\r\n";
+        if (!msgToSend.endsWith("\r\n")) { //et client teaks, millal rida otsa saab, peavad sõnumid lõppema uue rea märkidega.
+            msgToSend = msgToSend.stripTrailing() + "\r\n";
         }
         byte[] bytes = msgToSend.getBytes(StandardCharsets.UTF_8);
         ByteBuffer data = ByteBuffer.wrap(bytes);
         Server.logger.info(String.format("Sending: %s to connected clients", msgToSend.stripTrailing()));
         socketClientMap.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
             try {
-                if (d.isInChannel(channelName)){ //saadab ühendusele ainult siis kui ta on kanalis.
+                if (d.isInChannel(channelName)) { //saadab ühendusele ainult siis kui ta on kanalis.
                     c.write(data);
                     Server.logger.info(String.format("Sent: \"%s\" to %s at %s", new String(data.array()), socketClientMap.get(c).getName(), c.getRemoteAddress()));
                 }
@@ -40,8 +41,8 @@ public class Sender {
     }
 
     public void sendTextBack(String text, SocketChannel c) {
-        if (!text.endsWith("\r\n")){
-            text=text.stripTrailing() + "\r\n";
+        if (!text.endsWith("\r\n")) {
+            text = text.stripTrailing() + "\r\n";
         }
         byte[] tekstBytes = text.getBytes(StandardCharsets.UTF_8);
         ByteBuffer data = ByteBuffer.wrap(tekstBytes);
@@ -57,17 +58,23 @@ public class Sender {
 
     /**
      * Sends (up to) @param amount of last logged messages to specified channel.
-     * @param c channel to send to.
+     *
+     * @param c           channel to send to.
      * @param channelName name of the channel.
-     * @param amount of messages to return to the specified channel.
+     * @param amount      of messages to return to the specified channel.
      */
     public void sendChatLog(SocketChannel c, String channelName, int amount) {
-        for (Message msg : chatLogHandler.getLastMessages(channelName, amount)) {
-            sendTextBack(msg.toString(), c);
+        Message[] messageArray = chatLogHandler.getLastMessages(channelName, amount);
+        if (messageArray.length != 0
+                && !(messageArray[0].getChannelName().equals("") && messageArray[0].getMessage().equals("")
+                && messageArray[0].getUsername().equals(""))) { // kui esimene sõnum pole tühi
+            for (Message msg : messageArray) {
+                sendTextBack(msg.toString(), c);
+            }
         }
     }
 
-    public void addChannel(String channelName){
+    public void addChannel(String channelName) {
         chatLogHandler.addChannel(channelName);
     }
 

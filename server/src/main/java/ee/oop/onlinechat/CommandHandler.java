@@ -56,9 +56,9 @@ public class CommandHandler {
                             Server.logger.info(String.format("Account %s registered successfully.", answerParts[1]));
                             String accCreated = "Account created! Please /login [username] [password]!";
                             sender.sendTextBack(accCreated, socketChannel);
-                            forceChannelMain(answerParts[1]);
+                            forceChannelMainAndUsername(answerParts[1]);
                         } else if (response == SQLResponse.DUPLICATE) {
-                            String accExists = "An account with this name already exists. Use /login [username] [password]";
+                            String accExists = "An account (or channel) with this name already exists. Try a different username.";
                             sender.sendTextBack(accExists, socketChannel);
                         } else if (response == SQLResponse.ERROR) {
                             String connectionError = "Error connecting to the database. Please try again later.";
@@ -168,7 +168,7 @@ public class CommandHandler {
                             Server.logger.info(String.format("User %s created a new channel %s.", client.getName(), answerParts[1]));
                             break;
                         case DUPLICATE:
-                            sender.sendTextBack("A channel with this name already exists. Use /joinchannel [channel] [password](optional) to join the channel.", socketChannel);
+                            sender.sendTextBack("A channel or user with this name already exists. Use /joinchannel [channel] [password](optional) to join the channel.", socketChannel);
                             break;
                         case ERROR:
                             sender.sendTextBack("Error connecting to the database. Please try again later.", socketChannel);
@@ -186,6 +186,9 @@ public class CommandHandler {
                     SQLResponse response = SQLResponse.ERROR;
                     switch (answerParts.length) {
                         case 2: //paroolita kanaliga liitumine
+                            if (sqlConnection.isUserChannel(answerParts[1])) { // kui on kasutaja, siis sinna ühineda ei saa
+                                break;
+                            }
                             response = sqlConnection.login(answerParts[1], null, Command.JOINCHANNEL);
                             if (response == SQLResponse.ERROR) {
                                 break;
@@ -193,6 +196,9 @@ public class CommandHandler {
                             response = sqlConnection.addUserToChannel(client.getName(), answerParts[1]);
                             break;
                         case 3: //parooliga kanaliga liitumine
+                            if (sqlConnection.isUserChannel(answerParts[1])) { // kui on kasutaja, siis sinna ühineda ei saa
+                                break;
+                            }
                             response = sqlConnection.login(answerParts[1], answerParts[2], Command.JOINCHANNEL);
                             if (response == SQLResponse.ERROR) {
                                 break;
@@ -229,10 +235,11 @@ public class CommandHandler {
                 break;
             case LEAVECHANNEL:
                 if (client.isLoggedIn()) {
+                    SQLConnection sqlConnection = new SQLConnection();
+
                     if (answerParts.length != 2) {
                         sender.sendTextBack("Wrong syntax for this command. Use /leavechannel [channel]", socketChannel);
-                    } else if (client.isInChannel(answerParts[1])) {
-                        SQLConnection sqlConnection = new SQLConnection();
+                    } else if (client.isInChannel(answerParts[1]) && !sqlConnection.isUserChannel(answerParts[1])) {
                         SQLResponse response = sqlConnection.removeUserFromChannel(client.getName(), answerParts[1]);
 
                         if (response != SQLResponse.ERROR) {
@@ -250,30 +257,35 @@ public class CommandHandler {
                     sender.sendTextBack(loginRequest, socketChannel);
                 }
                 break;
-            case SEND: //spetsiifilisse kanalisse sõnumi saatmine
+            case SEND: //spetsiifilisse kanalisse või inimesele sõnumi saatmine
                 if (client.isLoggedIn()) {
+                    SQLConnection sqlConnection = new SQLConnection();
                     switch (answerParts.length) {
                         case 1:
                             sender.sendTextBack("The proper syntax for this command is /send [channel] [message]", socketChannel);
                             break;
                         case 2:
-                            if (client.isInChannel(answerParts[1])) {
+                            if (client.isInChannel(answerParts[1]) && !sqlConnection.isUserChannel(answerParts[1])) {
                                 sender.sendTextBack("You have joined this channel, but you need to put in a message as well. /send [channel] [message]", socketChannel);
-                            } else {
+                            } else if (sqlConnection.isUserChannel(answerParts[1])) {
+                                sender.sendTextBack("You have attempted to send an empty message to an user. /send [user] [message]", socketChannel);
+                            } else if (!client.isInChannel(answerParts[1]) && !sqlConnection.isUserChannel(answerParts[1])) {
                                 sender.sendTextBack("You have attempted to send a message to a channel you are not a part of.", socketChannel);
                             }
                             break;
                         default:
-                            if (client.isInChannel(answerParts[1])) {
+                            if (client.isInChannel(answerParts[1]) && !sqlConnection.isUserChannel(answerParts[1])) {
                                 String channel = answerParts[1];
                                 String[] messageParts = Arrays.copyOfRange(answerParts, 2, answerParts.length);
                                 sender.sendMsgWithSenderToChannel(channel, client, String.join(" ", messageParts));
 
+                            } else if (sqlConnection.isUserChannel(answerParts[1])) {
+                                String channel = answerParts[1];
+                                String[] messageParts = Arrays.copyOfRange(answerParts, 2, answerParts.length);
+                                sender.sendMsgWithSenderToChannel(channel, client, String.join(" ", messageParts));
                             } else {
                                 sender.sendTextBack("You are attempting to send a message to a channel you have not joined. Use /joinchannel [name] [password]", socketChannel);
                             }
-
-
                     }
 
                 } else {
@@ -284,19 +296,19 @@ public class CommandHandler {
         }
     }
 
-    private void forceChannelMain(String name) {
+    private void forceChannelMainAndUsername(String name) {
         SQLConnection sqlConnection = new SQLConnection();
         SQLResponse response;
-        response = sqlConnection.login("Main", null, Command.JOINCHANNEL);
+        response = sqlConnection.addUserToChannel(name, "Main");
         if (response == SQLResponse.ERROR) {
             sender.sendTextBack("Error connecting to the database. Please try again later.", socketChannel);
         }
-        response = sqlConnection.addUserToChannel(name, "Main");
+        response = sqlConnection.addUserToChannel(name, name);
 
         switch (response) {
             case SUCCESS:
                 client.joinChannel("Main");
-                Server.logger.info(String.format("User %s joined channel %s.", client.getName(), "Main"));
+                Server.logger.info(String.format("User %s joined channel %s.", client.getName(), "Main and " + name));
                 break;
             case ERROR:
                 sender.sendTextBack("Error connecting to the database. Please try again later.", socketChannel);

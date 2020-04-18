@@ -17,7 +17,11 @@ public class ChatLogHandler {
     }
 
     public Message[] getLastMessages(String channelName, int amount){
-        return chatLogs.get(channelName).getLastMessages(amount);
+        try {
+            return chatLogs.get(channelName).getLastMessages(amount);
+        } catch (NullPointerException e) { // kui sõnumeid pole veel saadetud, ei saa mingisugust infot ka tagasi saata, seega exception
+            return new Message[]{new Message("","","")};
+        }
     }
 
     private void getDBChannels(){

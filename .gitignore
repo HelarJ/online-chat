@@ -2,3 +2,5 @@ log/
 target/
 server/target/
 client/target/
+/client/src/test/
+/server/src/test/

@@ -24,31 +24,41 @@ public class Sender {
             msgToSend = msgToSend.stripTrailing() + "\r\n";
         }
         byte[] bytes = msgToSend.getBytes(StandardCharsets.UTF_8);
-        ByteBuffer data = ByteBuffer.wrap(bytes);
         Server.logger.info(String.format("Sending: %s to connected clients", msgToSend.stripTrailing()));
         socketClientMap.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
             try {
                 if (d.isInChannel(channelName)) { //saadab ühendusele ainult siis kui ta on kanalis.
-                    c.write(data);
-                    Server.logger.info(String.format("Sent: \"%s\" to %s at %s", new String(data.array()), socketClientMap.get(c).getName(), c.getRemoteAddress()));
+                    if (saatja.isWs()){
+                        ByteBuffer data = ByteBuffer.wrap(encode(bytes));
+                        c.write(data);
+                    } else {
+                        ByteBuffer data = ByteBuffer.wrap(bytes);
+                        c.write(data);
+                    }
+                    Server.logger.info(String.format("Sent: \"%s\" to %s at %s", text, socketClientMap.get(c).getName(), c.getRemoteAddress()));
                 }
             } catch (IOException e) {
                 Server.logger.severe("Error sending to channel: " + e.getMessage());
-            } finally {
-                data.rewind();
             }
         });
     }
 
     public void sendTextBack(String text, SocketChannel c) {
+        ClientInfo client = socketClientMap.get(c);
         if (!text.endsWith("\r\n")) {
             text = text.stripTrailing() + "\r\n";
         }
         byte[] tekstBytes = text.getBytes(StandardCharsets.UTF_8);
+        if (client.isWs()){
+            tekstBytes = encode(tekstBytes);
+        }
+
         ByteBuffer data = ByteBuffer.wrap(tekstBytes);
+
+
         try {
             c.write(data);
-            Server.logger.info(String.format("Sent: \"%s\" to %s at %s", text.stripTrailing(), socketClientMap.get(c).getName(), c.getRemoteAddress()));
+            Server.logger.info(String.format("Sent: \"%s\" to %s at %s", text.stripTrailing(), client.getName(), c.getRemoteAddress()));
         } catch (IOException e) {
             Server.logger.severe("Error sending to channel: " + e.getMessage());
         } finally {
@@ -76,6 +86,58 @@ public class Sender {
 
     public void addChannel(String channelName) {
         chatLogHandler.addChannel(channelName);
+    }
+
+    /**
+     * Kodeerib baitide massiivi websocket standarile sobivaks massiiviks.
+     * @param rawData algne byte[] massiiv.
+     * @return massiiv, millest saab websocket aru.
+     */
+
+    public static byte[] encode(byte[] rawData){  //websocketi byte magic võetud: https://stackoverflow.com/a/53208425
+        int frameCount;
+        byte[] frame = new byte[10];
+
+        frame[0] = (byte) 129;
+
+        if(rawData.length <= 125){
+            frame[1] = (byte) rawData.length;
+            frameCount = 2;
+        }else if(rawData.length <= 65535){
+            frame[1] = (byte) 126;
+            int len = rawData.length;
+            frame[2] = (byte)((len >> 8 ) & (byte)255);
+            frame[3] = (byte)(len & (byte)255);
+            frameCount = 4;
+        }else{
+            frame[1] = (byte) 127;
+            int len = rawData.length;
+            frame[2] = (byte)((len >> 56 ) & (byte)255);
+            frame[3] = (byte)((len >> 48 ) & (byte)255);
+            frame[4] = (byte)((len >> 40 ) & (byte)255);
+            frame[5] = (byte)((len >> 32 ) & (byte)255);
+            frame[6] = (byte)((len >> 24 ) & (byte)255);
+            frame[7] = (byte)((len >> 16 ) & (byte)255);
+            frame[8] = (byte)((len >> 8 ) & (byte)255);
+            frame[9] = (byte)(len & (byte)255);
+            frameCount = 10;
+        }
+
+        int bLength = frameCount + rawData.length;
+
+        byte[] reply = new byte[bLength];
+
+        int bLim = 0;
+        for(int i=0; i<frameCount;i++){
+            reply[bLim] = frame[i];
+            bLim++;
+        }
+        for(int i=0; i<rawData.length;i++){
+            reply[bLim] = rawData[i];
+            bLim++;
+        }
+
+        return reply;
     }
 
 

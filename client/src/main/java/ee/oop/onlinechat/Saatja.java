@@ -18,17 +18,12 @@ public class Saatja implements Runnable {
 
     @Override
     public void run() {
+        sendMessage("JAVA/Hello server");
         System.out.println("Waiting for input...");
         Scanner in = new Scanner(System.in, StandardCharsets.UTF_8);
         String message = in.nextLine();
         while (!message.equals("/exit")) {
-            try {
-                bufferedWriter.write(message);
-                bufferedWriter.flush();
-            } catch (IOException e) {
-                System.out.println("Error writing: ");
-                System.out.println(e.getMessage());
-            }
+            sendMessage(message);
             message = in.nextLine();
         }
         try {
@@ -37,7 +32,14 @@ public class Saatja implements Runnable {
             System.out.println("Couldn't close the client.");
             System.out.println(e.getMessage());
         }
-
-
+    }
+    public void sendMessage(String message) {
+        try {
+            bufferedWriter.write(message);
+            bufferedWriter.flush();
+        } catch (IOException e) {
+            System.out.println("Error writing: ");
+            System.out.println(e.getMessage());
+        }
     }
 }

@@ -7,14 +7,24 @@ public class ClientInfo {
     private String name;
     private Boolean loggedIn;
     private Set<String> joinedChannels;
+    private ClientType clientType;
 
     public ClientInfo() {
         this.name = "Default";
         this.loggedIn = false;
         this.joinedChannels = new HashSet<>();
+        this.clientType = null;
     }
 
-
+    public void setClientType(ClientType clientType){
+        this.clientType = clientType;
+    }
+    public ClientType getClientType(){
+        return clientType;
+    }
+    public boolean isWs(){
+        return clientType == ClientType.WEBSOCKET;
+    }
     public String getName() {
         return name;
     }

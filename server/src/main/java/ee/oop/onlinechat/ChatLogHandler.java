@@ -1,5 +1,7 @@
 package ee.oop.onlinechat;
 
+import ee.ut.oop.Message;
+
 import java.util.HashMap;
 import java.util.List;
 
@@ -20,7 +22,7 @@ public class ChatLogHandler {
         try {
             return chatLogs.get(channelName).getLastMessages(amount);
         } catch (NullPointerException e) { // kui sõnumeid pole veel saadetud, ei saa mingisugust infot ka tagasi saata, seega exception
-            return new Message[]{new Message("","","")};
+            return null;
         }
     }
 

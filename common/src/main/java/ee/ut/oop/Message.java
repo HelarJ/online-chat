@@ -1,17 +1,14 @@
-package ee.oop.onlinechat;
+package ee.ut.oop;
 
 import java.text.SimpleDateFormat;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.FormatStyle;
 import java.util.Date;
 
 
 public class Message {
     private String username;
-    private String message;
-    private String timestamp;
     private String channelName;
+    private String timestamp;
+    private String message;
 
     public Message(String channelName, String username, String message) {
         this.channelName = channelName;

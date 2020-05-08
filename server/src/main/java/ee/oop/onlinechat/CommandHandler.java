@@ -29,7 +29,7 @@ public class CommandHandler {
             command = Command.valueOf(answerParts[0].toUpperCase().substring(1)); //Saadud commande võrreldakse Command enumiga.
         } catch (IllegalArgumentException e) { //See exception visatakse, kui commandi pole enumis.
             Server.logger.info(String.format("Client %s attempted to use command %s which does not exist.", client.getName(), answerParts[0]));
-            sender.sendTextBack("Command " + answerParts[0] + " does not exist.", socketChannel);
+            sender.sendText("Command " + answerParts[0] + " does not exist.", socketChannel);
         }
 
         if (command == null) {
@@ -38,36 +38,36 @@ public class CommandHandler {
         switch (command) {
             case HELP:
                 String commands = "Available commands: /help, /register, /login, /logout, /exit, /createchannel, /joinchannel, /leavechannel, /send";
-                sender.sendTextBack(commands, socketChannel);
+                sender.sendText(commands, socketChannel);
                 break;
             case REGISTER:
                 if (!client.isLoggedIn()) {
                     if (answerParts.length != 3) {
                         String wrongArgs = "Invalid arguments for this command! Correct syntax: /register [username] [password]";
-                        sender.sendTextBack(wrongArgs, socketChannel);
+                        sender.sendText(wrongArgs, socketChannel);
                     }
                     if (answerParts[1].length() > 29) { // kui kasutajanimi on pikem kui 29 characterit, keelatakse kasutaja loomine
                         String tooLongUsername = "Entered username is too long! Please use a username with 29 characters or less.";
-                        sender.sendTextBack(tooLongUsername, socketChannel);
+                        sender.sendText(tooLongUsername, socketChannel);
                     } else {
                         SQLConnection sqlConnection = new SQLConnection();
                         SQLResponse response = sqlConnection.register(answerParts[1], answerParts[2], Command.REGISTER);
                         if (response == SQLResponse.SUCCESS) {
                             Server.logger.info(String.format("Account %s registered successfully.", answerParts[1]));
                             String accCreated = "Account created! Please /login [username] [password]!";
-                            sender.sendTextBack(accCreated, socketChannel);
+                            sender.sendText(accCreated, socketChannel);
                             forceChannelMainAndUsername(answerParts[1]);
                         } else if (response == SQLResponse.DUPLICATE) {
                             String accExists = "An account (or channel) with this name already exists. Try a different username.";
-                            sender.sendTextBack(accExists, socketChannel);
+                            sender.sendText(accExists, socketChannel);
                         } else if (response == SQLResponse.ERROR) {
                             String connectionError = "Error connecting to the database. Please try again later.";
-                            sender.sendTextBack(connectionError, socketChannel);
+                            sender.sendText(connectionError, socketChannel);
                         }
                     }
                 } else {
                     String alreadyLoggedIn = "This account is logged in! Please /logout before registering again.";
-                    sender.sendTextBack(alreadyLoggedIn, socketChannel);
+                    sender.sendText(alreadyLoggedIn, socketChannel);
                 }
                 break;
 
@@ -75,13 +75,13 @@ public class CommandHandler {
                 if (!client.isLoggedIn()) {
                     if (answerParts.length != 3) {
                         String wrongArgs = "Invalid arguments for this command! Correct syntax: /login [username] [password]";
-                        sender.sendTextBack(wrongArgs, socketChannel);
+                        sender.sendText(wrongArgs, socketChannel);
                     } else {
                         SQLConnection sqlConnection = new SQLConnection();
                         SQLResponse response = sqlConnection.login(answerParts[1], answerParts[2], Command.LOGIN);
                         if (response == SQLResponse.SUCCESS) {
                             String loginSuccessful = "Login successful.";
-                            sender.sendTextBack(loginSuccessful, socketChannel);
+                            sender.sendText(loginSuccessful, socketChannel);
                             client.setName(answerParts[1]);
                             client.setLoggedIn(true);
                             Server.logger.info(String.format("User %s logged in.", client.getName()));
@@ -94,24 +94,24 @@ public class CommandHandler {
                                 sender.sendChatLog(socketChannel, channel, 100); //saadab sisselogimisel vanad sõnumid.
                             }
                         } else if (response == SQLResponse.DOESNOTEXIST) {
-                            sender.sendTextBack("No account with this name found. Please /register [username] [password] to continue.", socketChannel);
+                            sender.sendText("No account with this name found. Please /register [username] [password] to continue.", socketChannel);
                         } else if (response == SQLResponse.WRONGPASSWORD) {
                             Server.logger.info(String.format("Wrong password entered for account %s.", answerParts[1]));
                             String invalidLogin = "Wrong password! Please try again.";
-                            sender.sendTextBack(invalidLogin, socketChannel);
+                            sender.sendText(invalidLogin, socketChannel);
                         } else if (response == SQLResponse.ERROR) {
                             String connectionError = "Error connecting to the database. Please try again later.";
-                            sender.sendTextBack(connectionError, socketChannel);
+                            sender.sendText(connectionError, socketChannel);
                         }
                     }
                 } else {
                     String alreadyLoggedIn = "This account is logged in! Please /logout before logging in again.";
-                    sender.sendTextBack(alreadyLoggedIn, socketChannel);
+                    sender.sendText(alreadyLoggedIn, socketChannel);
                 }
                 break;
 
             case LOGOUT:
-                sender.sendTextBack("Logged out.", socketChannel);
+                sender.sendText("Logged out.", socketChannel);
                 client.setLoggedIn(false);
                 client.setName("Default");
                 break;
@@ -120,10 +120,10 @@ public class CommandHandler {
                 if (client.isLoggedIn()) {
                     if (answerParts.length != 3) {
                         String wrongArgs = "You have either entered too few or too many arguments. Correct syntax: /history [channel] [amount]";
-                        sender.sendTextBack(wrongArgs, socketChannel);
+                        sender.sendText(wrongArgs, socketChannel);
                     } else {
                         if (!client.isInChannel(answerParts[1])) {
-                            sender.sendTextBack("You are attempting to get the message history of a channel you are not currently in", socketChannel);
+                            sender.sendText("You are attempting to get the message history of a channel you are not currently in", socketChannel);
                             break;
                         }
                         try {
@@ -131,18 +131,18 @@ public class CommandHandler {
                             if (amount > 500 || amount < 0) {
                                 String tooManyMsg = "The number you have entered is either too big or too small! Please enter" +
                                         " a number between 0 and 500";
-                                sender.sendTextBack(tooManyMsg, socketChannel);
+                                sender.sendText(tooManyMsg, socketChannel);
                             } else {
                                 sender.sendChatLog(socketChannel, answerParts[1], amount);
                             }
                         } catch (NumberFormatException e) {
                             String incorrectNum = "Incorrect number of messages to return. Please try again.";
-                            sender.sendTextBack(incorrectNum, socketChannel);
+                            sender.sendText(incorrectNum, socketChannel);
                         }
                     }
                 } else {
                     String loginRequest = "Please log in before requesting this command!";
-                    sender.sendTextBack(loginRequest, socketChannel);
+                    sender.sendText(loginRequest, socketChannel);
                 }
                 break;
             case CREATECHANNEL:
@@ -151,32 +151,40 @@ public class CommandHandler {
                     SQLResponse response = SQLResponse.ERROR;
                     switch (answerParts.length) {
                         case 2: //paroolita kanali registreerimine
+                            if (answerParts[1].length() > 29) { // kui kanali nimi on pikem kui 29 characterit, keelatakse kanali loomine
+                                sender.sendText("Entered channel name is too long! Please use a name with 29 characters or less.", socketChannel);
+                                break;
+                            }
                             response = sqlConnection.register(answerParts[1], null, Command.CREATECHANNEL);
                             break;
                         case 3: //parooliga kanali registreerimine
+                            if (answerParts[1].length() > 29) { // kui kanali nimi on pikem kui 29 characterit, keelatakse kanali loomine
+                                sender.sendText("Entered channel name is too long! Please use a name with 29 characters or less.", socketChannel);
+                                break;
+                            }
                             response = sqlConnection.register(answerParts[1], answerParts[2], Command.CREATECHANNEL);
                             break;
                         default:
-                            sender.sendTextBack("Invalid arguments for this command! Correct syntax: /createchannel [channelname] (optional)[password]", socketChannel);
+                            sender.sendText("Invalid arguments for this command! Correct syntax: /createchannel [channelname] (optional)[password]", socketChannel);
                             break;
                     }
 
                     switch (response) {
                         case SUCCESS:
                             sender.addChannel(answerParts[1]);
-                            sender.sendTextBack("Channel created successfully! Use /joinchannel " + answerParts[1] + " to join it.", socketChannel);
+                            sender.sendText("Channel created successfully! Use /joinchannel " + answerParts[1] + " to join it.", socketChannel);
                             Server.logger.info(String.format("User %s created a new channel %s.", client.getName(), answerParts[1]));
                             break;
                         case DUPLICATE:
-                            sender.sendTextBack("A channel or user with this name already exists. Use /joinchannel [channel] [password](optional) to join the channel.", socketChannel);
+                            sender.sendText("A channel or user with this name already exists. Use /joinchannel [channel] [password](optional) to join the channel.", socketChannel);
                             break;
                         case ERROR:
-                            sender.sendTextBack("Error connecting to the database. Please try again later.", socketChannel);
+                            sender.sendText("Error connecting to the database. Please try again later.", socketChannel);
                             break;
                     }
                 } else {
                     String loginRequest = "Please log in before requesting this command!";
-                    sender.sendTextBack(loginRequest, socketChannel);
+                    sender.sendText(loginRequest, socketChannel);
                 }
                 break;
 
@@ -206,31 +214,31 @@ public class CommandHandler {
                             response = sqlConnection.addUserToChannel(client.getName(), answerParts[1]);
                             break;
                         default:
-                            sender.sendTextBack("Invalid arguments for this command! Correct syntax: /joinchannel [channelname] [password](optional)", socketChannel);
+                            sender.sendText("Invalid arguments for this command! Correct syntax: /joinchannel [channelname] [password](optional)", socketChannel);
                             break;
                     }
 
                     switch (response) {
                         case SUCCESS:
                             client.joinChannel(answerParts[1]);
-                            sender.sendTextBack("Joined channel " + answerParts[1] + ". Use /send " + answerParts[1] + " [message] to talk in the channel.", socketChannel);
+                            sender.sendText("Joined channel " + answerParts[1] + ". Use /send " + answerParts[1] + " [message] to talk in the channel.", socketChannel);
                             sender.sendChatLog(socketChannel, answerParts[1], 100);
                             Server.logger.info(String.format("User %s joined channel %s.", client.getName(), answerParts[1]));
                             break;
                         case DOESNOTEXIST:
-                            sender.sendTextBack("No channel with this name found. Please use /createchannel [name] [password](optional)", socketChannel);
+                            sender.sendText("No channel with this name found. Please use /createchannel [name] [password](optional)", socketChannel);
                             break;
                         case WRONGPASSWORD:
                             Server.logger.info(String.format("User %s attempted to join channel %s with the wrong password.", client.getName(), answerParts[1]));
-                            sender.sendTextBack("Wrong password given for this channel.", socketChannel);
+                            sender.sendText("Wrong password given for this channel.", socketChannel);
                             break;
                         case ERROR:
-                            sender.sendTextBack("Error connecting to the database. Please try again later.", socketChannel);
+                            sender.sendText("Error connecting to the database. Please try again later.", socketChannel);
                             break;
                     }
                 } else {
                     String loginRequest = "Please log in before requesting this command!";
-                    sender.sendTextBack(loginRequest, socketChannel);
+                    sender.sendText(loginRequest, socketChannel);
                 }
                 break;
             case LEAVECHANNEL:
@@ -238,23 +246,23 @@ public class CommandHandler {
                     SQLConnection sqlConnection = new SQLConnection();
 
                     if (answerParts.length != 2) {
-                        sender.sendTextBack("Wrong syntax for this command. Use /leavechannel [channel]", socketChannel);
+                        sender.sendText("Wrong syntax for this command. Use /leavechannel [channel]", socketChannel);
                     } else if (client.isInChannel(answerParts[1]) && !sqlConnection.isUserChannel(answerParts[1])) {
                         SQLResponse response = sqlConnection.removeUserFromChannel(client.getName(), answerParts[1]);
 
                         if (response != SQLResponse.ERROR) {
-                            sender.sendTextBack(String.format("Left channel %s.", answerParts[1]), socketChannel);
+                            sender.sendText(String.format("Left channel %s.", answerParts[1]), socketChannel);
                             client.leaveChannel(answerParts[1]);
                         } else {
-                            sender.sendTextBack("Error connecting to the database. Please try again later.", socketChannel);
+                            sender.sendText("Error connecting to the database. Please try again later.", socketChannel);
                         }
                     } else {
-                        sender.sendTextBack(String.format("Not in channel %s.", answerParts[1]), socketChannel);
+                        sender.sendText(String.format("Not in channel %s.", answerParts[1]), socketChannel);
                     }
 
                 } else {
                     String loginRequest = "Please log in before requesting this command!";
-                    sender.sendTextBack(loginRequest, socketChannel);
+                    sender.sendText(loginRequest, socketChannel);
                 }
                 break;
             case SEND: //spetsiifilisse kanalisse või inimesele sõnumi saatmine
@@ -262,15 +270,15 @@ public class CommandHandler {
                     SQLConnection sqlConnection = new SQLConnection();
                     switch (answerParts.length) {
                         case 1:
-                            sender.sendTextBack("The proper syntax for this command is /send [channel] [message]", socketChannel);
+                            sender.sendText("The proper syntax for this command is /send [channel] [message]", socketChannel);
                             break;
                         case 2:
                             if (client.isInChannel(answerParts[1]) && !sqlConnection.isUserChannel(answerParts[1])) {
-                                sender.sendTextBack("You have joined this channel, but you need to put in a message as well. /send [channel] [message]", socketChannel);
+                                sender.sendText("You have joined this channel, but you need to put in a message as well. /send [channel] [message]", socketChannel);
                             } else if (sqlConnection.isUserChannel(answerParts[1])) {
-                                sender.sendTextBack("You have attempted to send an empty message to an user. /send [user] [message]", socketChannel);
+                                sender.sendText("You have attempted to send an empty message to an user. /send [user] [message]", socketChannel);
                             } else if (!client.isInChannel(answerParts[1]) && !sqlConnection.isUserChannel(answerParts[1])) {
-                                sender.sendTextBack("You have attempted to send a message to a channel you are not a part of.", socketChannel);
+                                sender.sendText("You have attempted to send a message to a channel you are not a part of.", socketChannel);
                             }
                             break;
                         default:
@@ -284,13 +292,13 @@ public class CommandHandler {
                                 String[] messageParts = Arrays.copyOfRange(answerParts, 2, answerParts.length);
                                 sender.sendMsgWithSenderToChannel(channel, client, String.join(" ", messageParts));
                             } else {
-                                sender.sendTextBack("You are attempting to send a message to a channel you have not joined. Use /joinchannel [name] [password]", socketChannel);
+                                sender.sendText("You are attempting to send a message to a channel you have not joined. Use /joinchannel [name] [password]", socketChannel);
                             }
                     }
 
                 } else {
                     String loginRequest = "Please log in before requesting this command!";
-                    sender.sendTextBack(loginRequest, socketChannel);
+                    sender.sendText(loginRequest, socketChannel);
                 }
                 break;
         }
@@ -301,7 +309,7 @@ public class CommandHandler {
         SQLResponse response;
         response = sqlConnection.addUserToChannel(name, "Main");
         if (response == SQLResponse.ERROR) {
-            sender.sendTextBack("Error connecting to the database. Please try again later.", socketChannel);
+            sender.sendText("Error connecting to the database. Please try again later.", socketChannel);
         }
         response = sqlConnection.addUserToChannel(name, name);
 
@@ -311,7 +319,7 @@ public class CommandHandler {
                 Server.logger.info(String.format("User %s joined channel %s.", client.getName(), "Main and " + name));
                 break;
             case ERROR:
-                sender.sendTextBack("Error connecting to the database. Please try again later.", socketChannel);
+                sender.sendText("Error connecting to the database. Please try again later.", socketChannel);
                 break;
         }
     }

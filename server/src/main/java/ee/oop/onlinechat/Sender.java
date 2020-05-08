@@ -1,5 +1,8 @@
 package ee.oop.onlinechat;
 
+import com.google.gson.Gson;
+import ee.ut.oop.Message;
+
 import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
@@ -19,13 +22,13 @@ public class Sender {
     public void sendMsgWithSenderToChannel(String channelName, ClientInfo saatja, String text) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
         Message msg = new Message(channelName, saatja.getName(), text);
         chatLogHandler.logMessage(channelName, msg);
-        String msgToSend = msg.toString();
+        String msgToSend = changeToJSON(msg);
         if (!msgToSend.endsWith("\r\n")) { //et client teaks, millal rida otsa saab, peavad sõnumid lõppema uue rea märkidega.
             msgToSend = msgToSend.stripTrailing() + "\r\n";
         }
         byte[] bytes = msgToSend.getBytes(StandardCharsets.UTF_8);
         Server.logger.info(String.format("Sending: %s to connected clients", msgToSend.stripTrailing()));
-        socketClientMap.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
+        socketClientMap.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud socketClientMapis.
             try {
                 if (d.isInChannel(channelName)) { //saadab ühendusele ainult siis kui ta on kanalis.
                     if (saatja.isWs()){
@@ -43,22 +46,30 @@ public class Sender {
         });
     }
 
-    public void sendTextBack(String text, SocketChannel c) {
+    private String changeToJSON(Message msg){
+        Gson gson = new Gson();
+        return gson.toJson(msg)+"\r\n";
+    }
+
+    public void sendText(String text, SocketChannel c){
+        Message msg = new Message("NOTICE", "Server", text);
+        sendMessage(msg, c);
+    }
+
+    public void sendMessage(Message msg, SocketChannel c) {
         ClientInfo client = socketClientMap.get(c);
-        if (!text.endsWith("\r\n")) {
-            text = text.stripTrailing() + "\r\n";
-        }
-        byte[] tekstBytes = text.getBytes(StandardCharsets.UTF_8);
+        String msgToSend = changeToJSON(msg);
+
+        byte[] tekstBytes = msgToSend.getBytes(StandardCharsets.UTF_8);
         if (client.isWs()){
             tekstBytes = encode(tekstBytes);
         }
 
         ByteBuffer data = ByteBuffer.wrap(tekstBytes);
 
-
         try {
             c.write(data);
-            Server.logger.info(String.format("Sent: \"%s\" to %s at %s", text.stripTrailing(), client.getName(), c.getRemoteAddress()));
+            Server.logger.info(String.format("Sent: \"%s\" to %s at %s", msg.getMessage(), client.getName(), c.getRemoteAddress()));
         } catch (IOException e) {
             Server.logger.severe("Error sending to channel: " + e.getMessage());
         } finally {
@@ -75,11 +86,9 @@ public class Sender {
      */
     public void sendChatLog(SocketChannel c, String channelName, int amount) {
         Message[] messageArray = chatLogHandler.getLastMessages(channelName, amount);
-        if (messageArray.length != 0
-                && !(messageArray[0].getChannelName().equals("") && messageArray[0].getMessage().equals("")
-                && messageArray[0].getUsername().equals(""))) { // kui esimene sõnum pole tühi
+        if (messageArray != null) {
             for (Message msg : messageArray) {
-                sendTextBack(msg.toString(), c);
+                sendMessage(msg, c);
             }
         }
     }

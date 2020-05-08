@@ -1,5 +1,6 @@
 package ee.oop.onlinechat;
 
+import ee.ut.oop.Message;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 
 import java.io.FileNotFoundException;

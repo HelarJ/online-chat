@@ -10,6 +10,7 @@ public class Server
     protected final static Logger logger = Logger.getLogger(ServerLog.class.getName());
 
     public static void main(String[] args) {
+        ServerLog.setup();
 
         try {
             new Ühendus("localhost", 1337).ühenda();

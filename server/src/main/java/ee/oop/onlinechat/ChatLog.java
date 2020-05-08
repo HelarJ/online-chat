@@ -1,5 +1,7 @@
 package ee.oop.onlinechat;
 
+import ee.ut.oop.Message;
+
 import java.util.ArrayList;
 import java.util.List;
 

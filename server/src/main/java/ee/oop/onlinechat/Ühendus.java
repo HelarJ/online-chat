@@ -123,7 +123,7 @@ public class Ühendus {
                         sender.sendText(loginRequest, socketChannel);
                     }
                 } catch (StringIndexOutOfBoundsException e) { // See exception visatakse, kui command oli /exit ja ühendus sulgetakse enne sõne töötlemist.
-                    Server.logger.info(String.format("Client %s closed client-side connection.", client.getName()));
+                    Server.logger.info(String.format("StringIndexOutOfBoundsException: %s Client %s closed client-side connection.", e.getMessage(), client.getName()));
                     client.setLoggedIn(false);
                     this.socketClientMap.remove(socketChannel);
                     socketChannel.close();

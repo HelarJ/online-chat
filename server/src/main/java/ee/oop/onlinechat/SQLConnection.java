@@ -27,11 +27,9 @@ public class SQLConnection {
             this.credentials = ("jdbc:mysql://" + prop.get("db.ip") + ":" + prop.get("db.port") + "/" + prop.get("db.name") + "?" +
                     "user=" + prop.get("db.username") + "&password=" + prop.get("db.password"));
         } catch (FileNotFoundException e) {
-            Server.logger.severe("Config file not found for database.");
-            Server.logger.severe(e.getMessage());
+            Server.logger.warning("Config file not found for database: "+e.getMessage());
         } catch (IOException e) {
-            Server.logger.severe("Error reading properties from config file.");
-            Server.logger.severe(e.getMessage());
+            Server.logger.warning("Error reading properties from config file: "+e.getMessage());
         }
     }
 
@@ -60,14 +58,14 @@ public class SQLConnection {
                 if (e.getErrorCode() == 1062 || e.getErrorCode() == 1305) { //1062 & 1305 are duplicate entry errorcodes.. ehk kui kasutaja või channel on juba andmebaasis olemas.
                     return SQLResponse.DUPLICATE;
                 }
-                Server.logger.severe("Unexpected error while registering a user/channel.");
-                Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+                Server.logger.warning("Unexpected SQL error. " +
+                        "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
                 return SQLResponse.ERROR;
             }
             return SQLResponse.SUCCESS;
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
             return SQLResponse.ERROR;
         }
     }
@@ -103,14 +101,14 @@ public class SQLConnection {
                 if (e.getErrorCode() == 0) {
                     return SQLResponse.DOESNOTEXIST;
                 }
-                Server.logger.severe("Unexpected error while logging in.");
-                Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+                Server.logger.warning("Unexpected SQL error. " +
+                        "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
                 return SQLResponse.ERROR;
 
             }
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
             return SQLResponse.ERROR;
         }
     }
@@ -124,8 +122,8 @@ public class SQLConnection {
             stmt.executeUpdate();
 
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
     }
 
@@ -145,8 +143,8 @@ public class SQLConnection {
             }
 
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
         Collections.reverse(messageList);
         return messageList;
@@ -161,8 +159,8 @@ public class SQLConnection {
                 channelList.add(resultSet.getString("nimi"));
             }
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
         return channelList;
     }
@@ -177,8 +175,8 @@ public class SQLConnection {
                 channelList.add(resultSet.getString("nimi"));
             }
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
         return channelList;
     }
@@ -192,8 +190,8 @@ public class SQLConnection {
             int vastus = resultSet.getInt("onKasutaja");
             return vastus == 1;
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
         }
         return false;
     }
@@ -207,8 +205,8 @@ public class SQLConnection {
             userCreate.executeQuery();
             return SQLResponse.SUCCESS;
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
             return SQLResponse.ERROR;
         }
     }
@@ -221,8 +219,8 @@ public class SQLConnection {
             userDelete.executeQuery();
             return SQLResponse.SUCCESS;
         } catch (SQLException e) {
-            Server.logger.severe("Error connecting to the database.");
-            Server.logger.severe("SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
+            Server.logger.warning("Error connecting to the database. " +
+                    "SQL ErrorCode: " + e.getErrorCode() + ", Message: " + e.getMessage());
             return SQLResponse.ERROR;
         }
     }

@@ -65,7 +65,7 @@ public class Ühendus {
                 }
             }
         }
-        Server.logger.severe("Server main loop has ended.");
+        Server.logger.warning("Server main loop has ended.");
         this.selector.close();
         serverChannel.close();
 

@@ -41,7 +41,7 @@ public class Sender {
                     Server.logger.info(String.format("Sent: \"%s\" to %s at %s", text, socketClientMap.get(c).getName(), c.getRemoteAddress()));
                 }
             } catch (IOException e) {
-                Server.logger.severe("Error sending to channel: " + e.getMessage());
+                Server.logger.warning("Error sending to channel: " + e.getMessage());
             }
         });
     }
@@ -71,7 +71,7 @@ public class Sender {
             c.write(data);
             Server.logger.info(String.format("Sent: \"%s\" to %s at %s", msg.getMessage(), client.getName(), c.getRemoteAddress()));
         } catch (IOException e) {
-            Server.logger.severe("Error sending to channel: " + e.getMessage());
+            Server.logger.warning("Error sending to channel: " + e.getMessage());
         } finally {
             data.rewind();
         }

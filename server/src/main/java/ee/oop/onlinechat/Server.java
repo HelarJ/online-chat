@@ -15,8 +15,7 @@ public class Server
         try {
             new Ühendus("localhost", 1337).ühenda();
         } catch (IOException e) {
-            logger.severe("Error in the main method of the server.");
-            logger.severe(e.getMessage());
+            logger.severe("Error in the main method of the server: " + e.getMessage());
         }
     }
 
@@ -32,7 +31,7 @@ public class Server
                 Thread.sleep(5000);
             } catch (InterruptedException ignored) {
             }
-            for(Handler h:logger.getHandlers())
+            for(Handler h:logger.getHandlers()) //Suleb logifailid korralikult.. kui log kaustas on .lck failid siis seda ei juhtunud...
             {
                 h.close();
             }

@@ -10,6 +10,7 @@ import com.google.gson.Gson;
 import ee.ut.oop.Message;
 
 public class Kuulaja implements Runnable {
+    private Socket socket;
     private BufferedReader bufferedReader;
 
     public Kuulaja(Socket socket) throws IOException {
@@ -18,7 +19,6 @@ public class Kuulaja implements Runnable {
 
     @Override
     public void run() {
-        System.out.println("Started listening...");
         Gson gson = new Gson();
         while(true){
             String output;
@@ -34,7 +34,10 @@ public class Kuulaja implements Runnable {
             }
 
         }
-        System.out.println("Closed client.");
-        System.exit(1);
+        try {
+            this.bufferedReader.close();
+        } catch (IOException e) {
+            System.out.println("Error shutting down the client: " + e.getMessage());
+        }
     }
 }

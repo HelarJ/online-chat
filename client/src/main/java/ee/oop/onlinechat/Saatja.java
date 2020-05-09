@@ -12,14 +12,12 @@ public class Saatja implements Runnable {
     BufferedWriter bufferedWriter;
 
     public Saatja(Socket socket) throws IOException {
-        this.socket = socket;
         this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
     }
 
     @Override
     public void run() {
-        sendMessage("JAVA/Hello server");
-        System.out.println("Waiting for input...");
+        sendMessage("JAVA/Hello server"); //Esimese asjana saadab serverile sõnumi, mis ütleb talle mis tüüpi kliendiga on tegu.
         Scanner in = new Scanner(System.in, StandardCharsets.UTF_8);
         String message = in.nextLine();
         while (!message.equals("/exit")) {
@@ -27,9 +25,9 @@ public class Saatja implements Runnable {
             message = in.nextLine();
         }
         try {
-            socket.close();
+            this.bufferedWriter.close();
         } catch (IOException e) {
-            System.out.println("Couldn't close the client.");
+            System.out.println("Error shutting down the client.");
             System.out.println(e.getMessage());
         }
     }

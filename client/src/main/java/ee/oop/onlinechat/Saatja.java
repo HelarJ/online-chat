@@ -2,18 +2,15 @@ package ee.oop.onlinechat;
 
 import ee.ut.oop.Crypto;
 
-import java.io.BufferedWriter;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class Saatja implements Runnable {
-    SocketChannel socketChannel;
-    Crypto encrypter;
+    private SocketChannel socketChannel;
+    private Crypto encrypter;
 
     public Saatja(SocketChannel socketChannel, Crypto encrypter) {
         this.socketChannel = socketChannel;

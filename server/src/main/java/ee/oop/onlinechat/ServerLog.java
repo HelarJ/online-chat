@@ -3,8 +3,6 @@ package ee.oop.onlinechat;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.Properties;
@@ -24,9 +22,11 @@ public class ServerLog {
             Server.logger.warning("Error loading properties");
         }
 
-        File file = new File("log"); //Kui working directorys(kui ideas tööe paned siis projekti kaust) pole log kausta siis loob selle.
+        File file = new File("log"); //Kui working directorys(kui ideas tööle paned siis projekti kaust) pole log kausta siis loob selle.
         if (!file.exists()){
-            file.mkdir();
+            if(file.mkdir()){
+                Server.logger.info("Log directory created successfully");
+            }
         }
         Date date = new Date();
         SimpleDateFormat dateFormat = new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss");
@@ -41,7 +41,8 @@ public class ServerLog {
         FileHandler fh;
         try {
 
-            fh = new FileHandler(file.getAbsolutePath()+"/output_"+dateFormat.format(date)+".log"); //Kõikide sõnumite logger läheb läbi simpleformatteri, mis teeb selle loetavamaks.
+            fh = new FileHandler(file.getAbsolutePath()+"/output_"+dateFormat.format(date)+".log");
+            //Kõikide sõnumite logger läheb läbi simpleformatteri, mis teeb selle loetavamaks.
             fh.setFormatter(new SimpleFormatter());
             fh.publish(new LogRecord(Level.INFO, "Start of the output log."));
             fh.flush();
@@ -52,8 +53,6 @@ public class ServerLog {
             logger.warning("Error creating the log file."+e.getMessage());
             throw new RuntimeException("Error creating the log file.");
         }
-
-
         logger.addHandler(fh);
     }
 }

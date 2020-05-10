@@ -7,7 +7,6 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Map;
 
 public class Sender {
@@ -20,13 +19,10 @@ public class Sender {
         this.chatLogHandler = new ChatLogHandler();
     }
 
-    public void sendMsgWithSenderToChannel(String channelName, ClientInfo saatja, String text) { // sama asi mis sendToAll, aga selle asemel et saadab byteBufferi siis saadab stringi
+    public void sendMsgWithSenderToChannel(String channelName, ClientInfo saatja, String text) {
         Message msg = new Message(channelName, saatja.getName(), text);
         chatLogHandler.logMessage(channelName, msg);
         String msgToSend = changeToJSON(msg);
-        if (!msgToSend.endsWith("\r\n")) { //et client teaks, millal rida otsa saab, peavad sõnumid lõppema uue rea märkidega.
-            msgToSend = msgToSend.stripTrailing() + "\r\n";
-        }
         byte[] bytes = msgToSend.getBytes(StandardCharsets.UTF_8);
         Server.logger.info(String.format("Sending: %s to connected clients", msgToSend.stripTrailing()));
         if (bytes.length == 0){
@@ -52,7 +48,7 @@ public class Sender {
 
     private String changeToJSON(Message msg){
         Gson gson = new Gson();
-        return gson.toJson(msg)+"\r\n";
+        return gson.toJson(msg);
     }
 
     public void sendText(String text, SocketChannel c){
@@ -96,6 +92,19 @@ public class Sender {
             for (Message msg : messageArray) {
                 sendMessage(msg, c);
             }
+        }
+    }
+
+    public void sendBytes(SocketChannel c, byte[] data) {
+        ClientInfo client = socketClientMap.get(c);
+        ByteBuffer bb = ByteBuffer.wrap(client.getEncrypter().encrypt(data));
+        try {
+            c.write(bb);
+            Server.logger.info(String.format("Sent encrypted bytes to %s",c.getRemoteAddress()));
+        } catch (IOException e) {
+            Server.logger.warning("Error sending to channel: " + e.getMessage());
+        } finally {
+            bb.rewind();
         }
     }
 
@@ -147,27 +156,11 @@ public class Sender {
             reply[bLim] = frame[i];
             bLim++;
         }
-        for(int i=0; i<rawData.length;i++){
-            reply[bLim] = rawData[i];
+        for (byte rawDatum : rawData) {
+            reply[bLim] = rawDatum;
             bLim++;
         }
 
         return reply;
-    }
-
-
-    public void sendBytes(SocketChannel c, byte[] data) {
-        ClientInfo client = socketClientMap.get(c);
-        ByteBuffer bb = ByteBuffer.wrap(client.getEncrypter().encrypt(data));
-        try {
-            c.write(bb);
-            Server.logger.info(String.format("Sent encrypted bytes to %s",c.getRemoteAddress()));
-        } catch (IOException e) {
-            Server.logger.warning("Error sending to channel: " + e.getMessage());
-        } finally {
-            bb.rewind();
-        }
-
-
     }
 }

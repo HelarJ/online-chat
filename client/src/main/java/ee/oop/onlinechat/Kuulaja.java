@@ -1,21 +1,21 @@
 package ee.oop.onlinechat;
 
-import java.io.*;
-import java.net.Socket;
-import java.nio.ByteBuffer;
-import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
-
 import com.google.gson.Gson;
 import ee.ut.oop.Crypto;
 import ee.ut.oop.Message;
 
+import java.io.ByteArrayOutputStream;
+import java.io.IOException;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
+
 public class Kuulaja implements Runnable {
     private Crypto decrypter;
-    SocketChannel socketChannel;
+    private SocketChannel socketChannel;
 
-    public Kuulaja(SocketChannel socketChannel, Crypto decrypter){
+
+    public Kuulaja(SocketChannel socketChannel, Crypto decrypter) {
         this.socketChannel = socketChannel;
         this.decrypter = decrypter;
     }
@@ -29,7 +29,8 @@ public class Kuulaja implements Runnable {
                 int count;
                 ByteBuffer buffer = ByteBuffer.allocate(1024);
                 try {
-                    count = socketChannel.read(buffer);
+                    count = socketChannel.read(buffer); //tuleb decryption error, kui see ei suuda korraga kogu andmeid lugeda...
+                                                        //aga hetkel ei suuda ka paremat varianti välja mõelda.
                     byte[] data = new byte[count];
                     System.arraycopy(buffer.array(), 0, data, 0, count);
                     bos.writeBytes(data);

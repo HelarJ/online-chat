@@ -34,20 +34,24 @@ socket.onopen = function(event) {
       
       let timestamp = document.createElement("td");
       timestamp.innerText=messageJSON["timestamp"]
+      timestamp.className = "timestamp"
       newtablerow.appendChild(timestamp);
 
       let channelname = document.createElement("td");
       channelname.innerText="#"+messageJSON["channelName"]
+      channelname.className = "channelname"
       newtablerow.appendChild(channelname);
+    
 
       let username = document.createElement("td");
       username.innerText=messageJSON["username"]+":"
+      username.className = "username"
       newtablerow.appendChild(username);
-
-      
+    
       
       let message = document.createElement("td");
       message.innerText=messageJSON["message"]
+      message.className = "message"
       newtablerow.appendChild(message);
 
     } catch(err){ //error tuleb JSON parsemisest, kui client saadab oma notificationeid, mis ei ole json formaadis.

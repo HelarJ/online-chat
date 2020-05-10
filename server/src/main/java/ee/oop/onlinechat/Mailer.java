@@ -1,6 +1,9 @@
 package ee.oop.onlinechat;
 
-import javax.mail.*;
+import javax.mail.MessagingException;
+import javax.mail.PasswordAuthentication;
+import javax.mail.Session;
+import javax.mail.Transport;
 import javax.mail.internet.InternetAddress;
 import javax.mail.internet.MimeMessage;
 import java.io.IOException;
@@ -50,8 +53,5 @@ public class Mailer {
         } catch (MessagingException e){
             Server.logger.warning("Error sending email: "+e.getMessage());
         }
-
-
-
     }
 }

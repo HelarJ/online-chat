@@ -2,22 +2,14 @@ package ee.oop.onlinechat;
 
 import com.google.crypto.tink.BinaryKeysetWriter;
 import com.google.crypto.tink.CleartextKeysetHandle;
-import com.google.gson.stream.JsonToken;
 import ee.ut.oop.Crypto;
 
-import java.io.BufferedWriter;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
-import java.io.OutputStreamWriter;
 import java.net.ConnectException;
 import java.net.InetSocketAddress;
-import java.net.Socket;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
-import java.nio.charset.StandardCharsets;
-import java.security.GeneralSecurityException;
-import java.util.Arrays;
-import java.util.stream.DoubleStream;
 
 public class Client {
     public static void main(String[] args) throws IOException, InterruptedException {
@@ -27,7 +19,7 @@ public class Client {
         InetSocketAddress hostAddress = new InetSocketAddress("localhost", 1337);
         SocketChannel socketChannel;
         while (true){
-            try {
+            try { //initial trading of public keys.
                 socketChannel = SocketChannel.open(hostAddress);
                 ByteArrayOutputStream bos = new ByteArrayOutputStream();
                 CleartextKeysetHandle.write(decrypter.getPublicKeysetHandle(), BinaryKeysetWriter.withOutputStream(bos));

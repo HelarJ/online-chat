@@ -55,7 +55,6 @@ public class Crypto {
                      HybridDecrypt.class);
              return hybridDecrypt.decrypt(message, null);
          } catch (GeneralSecurityException e) {
-             e.printStackTrace();
              System.out.println("Error decrypting message: " +e.getMessage());
          }
          return null;

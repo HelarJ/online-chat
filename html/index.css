@@ -1,5 +1,4 @@
 #messagediv {
-    max-width: 100vw;
     max-height:90vh;
     min-height:90vh;
     overflow: auto;
@@ -7,6 +6,21 @@
 
 td {
     max-height: 100%;
-    max-width: 90vw;
     overflow: hidden;
+
+}
+
+.message {
+    max-width: 80vw;
+}
+
+.timestamp {
+    min-width: 10vw;
+    word-wrap: none;
+}
+.channelname {
+    min-width: 5vw;
+}
+.username {
+    min-width: 5vh
 }

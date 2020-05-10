@@ -25,7 +25,6 @@ public class Ühendus {
     private Selector selector;
     private Map<SocketChannel, ClientInfo> socketClientMap;
     private InetSocketAddress listenAddress;
-
     private Sender sender;
 
     public Ühendus(String aadress, int port) {
@@ -167,7 +166,10 @@ public class Ühendus {
     private void acceptWebsocket(SocketChannel socketChannel, String vastus) throws IOException {
         Matcher match = Pattern.compile("Sec-WebSocket-Key: (.*)").matcher(vastus); //loeb vastusest võtme.
         try {
-            match.find();
+            if (!match.find()){
+                Server.logger.warning("Received an unknown handshake from websocket.");
+                return;
+            }
             byte[] wsVastus = ("HTTP/1.1 101 Switching Protocols\r\n"
                     + "Connection: Upgrade\r\n"
                     + "Upgrade: websocket\r\n"

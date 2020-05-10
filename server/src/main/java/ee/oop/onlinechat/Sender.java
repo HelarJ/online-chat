@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.nio.ByteBuffer;
 import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Map;
 
 public class Sender {
@@ -28,14 +29,17 @@ public class Sender {
         }
         byte[] bytes = msgToSend.getBytes(StandardCharsets.UTF_8);
         Server.logger.info(String.format("Sending: %s to connected clients", msgToSend.stripTrailing()));
+        if (bytes.length == 0){
+            return;
+        }
         socketClientMap.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud socketClientMapis.
             try {
                 if (d.isInChannel(channelName)) { //saadab ühendusele ainult siis kui ta on kanalis.
-                    if (saatja.isWs()){
+                    if (d.isWs()){
                         ByteBuffer data = ByteBuffer.wrap(encode(bytes));
                         c.write(data);
                     } else {
-                        ByteBuffer data = ByteBuffer.wrap(bytes);
+                        ByteBuffer data = ByteBuffer.wrap(d.getEncrypter().encrypt(bytes));
                         c.write(data);
                     }
                     Server.logger.info(String.format("Sent: \"%s\" to %s at %s", text, socketClientMap.get(c).getName(), c.getRemoteAddress()));
@@ -63,6 +67,8 @@ public class Sender {
         byte[] tekstBytes = msgToSend.getBytes(StandardCharsets.UTF_8);
         if (client.isWs()){
             tekstBytes = encode(tekstBytes);
+        } else {
+            tekstBytes = client.getEncrypter().encrypt(tekstBytes);
         }
 
         ByteBuffer data = ByteBuffer.wrap(tekstBytes);
@@ -150,15 +156,18 @@ public class Sender {
     }
 
 
-      /*private void sendToAll(ByteBuffer data) { // saab hiljem kasutada, kui saadame pilte ja asju
-        dataMapper.forEach((c, d) -> { //saadab igale ühendusele, mis on kaardistatud dataMapperis.
-            try {
-                c.write(data);
-                System.out.printf("Sent: %s to %s%n at %s%n", new String(data.array()), d.getNimi(), c.getRemoteAddress());
-                data.rewind();
-            } catch (IOException e) {
-                System.out.println("Error sending to channel: " + e.getMessage());
-            }
-        });
-    }*/
+    public void sendBytes(SocketChannel c, byte[] data) {
+        ClientInfo client = socketClientMap.get(c);
+        ByteBuffer bb = ByteBuffer.wrap(client.getEncrypter().encrypt(data));
+        try {
+            c.write(bb);
+            Server.logger.info(String.format("Sent encrypted bytes to %s",c.getRemoteAddress()));
+        } catch (IOException e) {
+            Server.logger.warning("Error sending to channel: " + e.getMessage());
+        } finally {
+            bb.rewind();
+        }
+
+
+    }
 }

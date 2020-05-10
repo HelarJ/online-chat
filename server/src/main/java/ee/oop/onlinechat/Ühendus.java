@@ -1,5 +1,9 @@
 package ee.oop.onlinechat;
 
+import com.google.crypto.tink.BinaryKeysetWriter;
+import com.google.crypto.tink.CleartextKeysetHandle;
+import ee.ut.oop.Crypto;
+
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.net.InetSocketAddress;
@@ -84,9 +88,9 @@ public class Ühendus {
 
     private void read(SelectionKey key) throws IOException {
         SocketChannel socketChannel = (SocketChannel) key.channel();
-        ClientInfo client = socketClientMap.get(socketChannel);
         Socket s = socketChannel.socket();
-        ByteBuffer buffer = ByteBuffer.allocate(256);
+        ClientInfo client = socketClientMap.get(socketChannel);
+        ByteBuffer buffer = ByteBuffer.allocate(1024);
         ByteArrayOutputStream bos = new ByteArrayOutputStream();
         int count;
         try {
@@ -96,39 +100,36 @@ public class Ühendus {
                 bos.writeBytes(data);
                 buffer.clear();
             }
-            String vastus = new String(bos.toByteArray(), StandardCharsets.UTF_8);
-
-            if (client.isWs()){
-                vastus = new String(decode(buffer));
+            if (client.isInitialConnection()){
+                setConnectionType(socketChannel, bos);
+                return;
             }
-            if (client.getClientType() == null){
-                setClientType(socketChannel, vastus);
-                String greeting = "Welcome to blablaChat! To start chatting, please /register [username] [password] or /login [username] [password]!";
-                sender.sendText(greeting, socketChannel);
+            if (bos.size()>512){
+                String tooLongMsg = "The message you have entered contains too many characters. Please keep it under 512 bytes.";
+                sender.sendText(tooLongMsg, socketChannel);
+                return;
+            }
+
+            String vastus;
+            if (client.isWs()){
+                vastus = new String(decode(buffer), StandardCharsets.UTF_8);
             } else {
-                Server.logger.info("Got: " + vastus + " from " + socketChannel.getRemoteAddress());
-                try {
-                    if (vastus.substring(0, 1).equals("/")) { // kui oli command
-                        CommandHandler commandHandler = new CommandHandler(client, socketChannel, sender); //handler saab clientinfo, socketChanneli ja sender objekti mida kasutada.
-                        commandHandler.handleCommand(vastus);
-                    } else if (client.isLoggedIn()) { // kasutaja on sisse logitud
-                        if (vastus.length() < 500) { // kui vastus on alla teatud lubatud suuruse
-                            sender.sendMsgWithSenderToChannel("Main", client, vastus);
-                        } else {
-                            String tooLongMsg = "The message you have entered contains too many characters. Please keep it under 500 characters.";
-                            sender.sendText(tooLongMsg, socketChannel);
-                        }
-                    } else { // kasutaja pole sisse logitud
-                        String loginRequest = "Please log in or create an account before sending messages with /register [username] [password]!";
-                        sender.sendText(loginRequest, socketChannel);
-                    }
-                } catch (StringIndexOutOfBoundsException e) { // See exception visatakse, kui command oli /exit ja ühendus sulgetakse enne sõne töötlemist.
-                    Server.logger.info(String.format("StringIndexOutOfBoundsException: %s Client %s closed client-side connection.", e.getMessage(), client.getName()));
-                    client.setLoggedIn(false);
-                    this.socketClientMap.remove(socketChannel);
-                    socketChannel.close();
-                    key.cancel();
-                }
+                vastus = new String(client.getDecrypter().decrypt(bos.toByteArray()), StandardCharsets.UTF_8);
+            }
+            bos.reset();
+
+
+
+            Server.logger.info("Got: " + vastus + " from " + socketChannel.getRemoteAddress());
+
+            if (vastus.startsWith("/")) { // kui oli command
+                CommandHandler commandHandler = new CommandHandler(client, socketChannel, sender); //handler saab clientinfo, socketChanneli ja sender objekti mida kasutada.
+                commandHandler.handleCommand(vastus);
+            } else if (client.isLoggedIn()) { // kasutaja on sisse logitud
+                sender.sendMsgWithSenderToChannel("Main", client, vastus);
+            } else { // kasutaja pole sisse logitud
+                String loginRequest = "Please log in or create an account before sending messages with /register [username] [password]!";
+                sender.sendText(loginRequest, socketChannel);
             }
         } catch (IOException e) {
             client.setLoggedIn(false);
@@ -139,20 +140,32 @@ public class Ühendus {
         }
     }
 
-    private void setClientType(SocketChannel socketChannel, String vastus) throws IOException {
+    private void setConnectionType(SocketChannel socketChannel, ByteArrayOutputStream bos) throws IOException {
         ClientInfo client = socketClientMap.get(socketChannel);
+        String vastus = bos.toString(StandardCharsets.UTF_8);
         if (vastus.startsWith("GET / HTTP/1.1")){
             client.setClientType(ClientType.WEBSOCKET);
-            acceptWebsocket(socketChannel, vastus);
+            acceptWebsocket(socketChannel, vastus); //Kui tegu on websocket ühendusega, siis peab server esimesena saatma teatud sõnumi, mis on acceptWebsocketis.
             Server.logger.info("Javascript (ws) client connected.");
-        } else {
+        } else { //Kui tegu on java ühendusega, ehk kasutatakse google tink encryptionit.
+            client.setEncrypter(new Crypto(bos.toByteArray())); //Kõigepealt saadakse kliendilt kliendi Public Key ning antakse kliendile Crypto objekt, mida kasutada sõnumite krüpteerimisel.
+            client.setDecrypter(new Crypto()); //Seejärel lisatakse kliendile uus, serveripoolse uue privaatvõtmega Crypto objekt, mida kasutada kliendi poolt saadud sõnumite DEkrüpteerimisel.
+            ByteArrayOutputStream cryptoBos = new ByteArrayOutputStream();
+
+            //Seejärel saadetakse private keyst tuletatud public key
+            CleartextKeysetHandle.write(client.getDecrypter().getPublicKeysetHandle(), BinaryKeysetWriter.withOutputStream(cryptoBos));
+            // ning saadetakse see kliendile.
+            sender.sendBytes(socketChannel, cryptoBos.toByteArray());
+
             client.setClientType(ClientType.JAVA);
             Server.logger.info("Java client connected.");
         }
+        //Lõpuks saadetakse kõigile tervitus.
+        sender.sendText("Welcome to Online Chat! Please use /login (or /register) [username] [password] to start chatting!", socketChannel);
     }
 
     private void acceptWebsocket(SocketChannel socketChannel, String vastus) throws IOException {
-        Matcher match = Pattern.compile("Sec-WebSocket-Key: (.*)").matcher(vastus); //loeb vastusest krüpto võtme.
+        Matcher match = Pattern.compile("Sec-WebSocket-Key: (.*)").matcher(vastus); //loeb vastusest võtme.
         try {
             match.find();
             byte[] wsVastus = ("HTTP/1.1 101 Switching Protocols\r\n"
@@ -175,9 +188,13 @@ public class Ühendus {
      * @return dekodeeritud byte[] massiiv, mille sisuks on ainult saadetud sõnum.
      */
 
-    private byte[] decode(ByteBuffer buffer){ //WS byte magic võetud https://gist.github.com/hide1202/3ae71fd794ac76aa72c456f632e12c5f
+    private byte[] decode(ByteBuffer buffer) throws IOException{ //WS byte magic võetud https://gist.github.com/hide1202/3ae71fd794ac76aa72c456f632e12c5f
         byte firstByte = buffer.get();
         byte secondByte = buffer.get();
+
+        if (firstByte == -120 && secondByte == -126){ //Sellise asja saadab ws client, kui teha refresh või kinni panna tab.
+            throw new IOException("WS Connection closed");
+        }
 
         byte mask = (byte) ((secondByte & 128) >> 7);
         long length = (secondByte & 64) | (secondByte & 32) | (secondByte & 16) | (secondByte & 8) | (secondByte & 4) | (secondByte & 2) | (secondByte & 1);

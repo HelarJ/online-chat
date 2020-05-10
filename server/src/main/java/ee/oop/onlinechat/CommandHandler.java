@@ -82,9 +82,12 @@ public class CommandHandler {
     }
 
     private void handleRegister(){
-        if (checkIfNotLoggedIn()){
+        if (client.isLoggedIn()){
+            String alreadyLoggedIn = "This account is logged in! Please /logout before registering again.";
+            sender.sendText(alreadyLoggedIn, socketChannel);
             return;
         }
+
         if (answerParts.length != 3) {
             String wrongArgs = "Invalid arguments for this command! Correct syntax: /register [username] [password]";
             sender.sendText(wrongArgs, socketChannel);

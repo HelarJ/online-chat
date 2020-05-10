@@ -2,12 +2,17 @@
 <html>
   <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
     <title>Online Chat</title>
+    <link rel="stylesheet" href="index.css" />
   </head>
   <body>
+    <div id="messagediv">
+      <table id="table"></table>
+    </div>
     <div>Message: <input id="msg" type="text"><br></div>
     <button id="submitbtn" onclick="sendMessage(document.getElementById('msg').value)">Submit</button>
-    <table id="table"></table>
+    
     
   </body>
   <script src="index.js"></script>

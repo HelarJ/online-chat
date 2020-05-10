@@ -1,16 +1,47 @@
 package ee.oop.onlinechat;
 
+import com.google.crypto.tink.BinaryKeysetWriter;
+import com.google.crypto.tink.CleartextKeysetHandle;
+import com.google.gson.stream.JsonToken;
+import ee.ut.oop.Crypto;
+
+import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.net.ConnectException;
+import java.net.InetSocketAddress;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.util.Arrays;
+import java.util.stream.DoubleStream;
 
 public class Client {
     public static void main(String[] args) throws IOException, InterruptedException {
         int aeg = 5000;
-        Socket client;
+        Crypto decrypter = new Crypto();
+        Crypto encrypter;
+        InetSocketAddress hostAddress = new InetSocketAddress("localhost", 1337);
+        SocketChannel socketChannel;
         while (true){
             try {
-                client = new Socket("localhost", 1337);
+                socketChannel = SocketChannel.open(hostAddress);
+                ByteArrayOutputStream bos = new ByteArrayOutputStream();
+                CleartextKeysetHandle.write(decrypter.getPublicKeysetHandle(), BinaryKeysetWriter.withOutputStream(bos));
+                socketChannel.write(ByteBuffer.wrap(bos.toByteArray()));
+
+                bos.reset();
+                ByteBuffer buffer = ByteBuffer.allocate(1024);
+                int count = socketChannel.read(buffer);
+                byte[] data = new byte[count];
+                System.arraycopy(buffer.array(), 0, data, 0, count);
+                bos.writeBytes(data);
+                buffer.clear();
+                byte[] decrypted = decrypter.decrypt(bos.toByteArray());
+                encrypter = new Crypto(decrypted);
                 break;
             } catch (ConnectException e) {
                 System.out.println("Error connecting to the server.. Retrying in " + aeg / 1000+"s.");
@@ -18,18 +49,16 @@ public class Client {
                 aeg += 1000;
 
                 if (aeg > 20000) {
-                    aeg = 1000;
+                    aeg = 20000;
                 }
             }
         }
 
-
-
         System.out.println("Client connected!");
 
-        final Kuulaja kuulaja = new Kuulaja(client);
+        final Kuulaja kuulaja = new Kuulaja(socketChannel, decrypter);
         Thread.sleep(50);
-        final Saatja saatja = new Saatja(client);
+        final Saatja saatja = new Saatja(socketChannel, encrypter);
 
         Thread kuulajaThread = new Thread(kuulaja);
         Thread saatjaThread = new Thread(saatja);
@@ -38,7 +67,7 @@ public class Client {
 
         kuulajaThread.join(); //need joinid toimuvad alles siis, kui while loopid nendes threadides otsa saavad.
         saatjaThread.join();
-        client.close();
+        socketChannel.close();
 
         System.out.println("Client shut down.");
     }

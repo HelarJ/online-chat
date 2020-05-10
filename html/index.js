@@ -8,12 +8,17 @@ socket.onopen = function(event) {
   socket.onmessage = function(event) {
     console.log(`[message] Data received from server: ${event.data}`);
     appendMessage(event.data);
+    let messagediv = document.getElementById("messagediv");
+    messagediv.scrollBy(0, window.innerHeight);
+
 
   };
   
   socket.onclose = function(event) {
     console.log(`[close] Connection closed, code=${event.code} reason=${event.reason}`);
     appendMessage("Connection closed")
+    let messagediv = document.getElementById("messagediv");
+    messagediv.scrollBy(0, window.innerHeight);
   };
   
   socket.onerror = function(error) {
@@ -63,6 +68,7 @@ socket.onopen = function(event) {
 
   function sendMessage(message){
       socket.send(message);
+      document.getElementById('msg').value = "";
   }
 
   var input = document.getElementById("msg");

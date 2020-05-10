@@ -1,23 +1,27 @@
 package ee.oop.onlinechat;
 
+import ee.ut.oop.Crypto;
+
 import java.io.BufferedWriter;
 import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.net.Socket;
+import java.nio.ByteBuffer;
+import java.nio.channels.SocketChannel;
 import java.nio.charset.StandardCharsets;
 import java.util.Scanner;
 
 public class Saatja implements Runnable {
-    Socket socket;
-    BufferedWriter bufferedWriter;
+    SocketChannel socketChannel;
+    Crypto encrypter;
 
-    public Saatja(Socket socket) throws IOException {
-        this.bufferedWriter = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+    public Saatja(SocketChannel socketChannel, Crypto encrypter) {
+        this.socketChannel = socketChannel;
+        this.encrypter = encrypter;
     }
 
     @Override
     public void run() {
-        sendMessage("JAVA/Hello server"); //Esimese asjana saadab serverile sõnumi, mis ütleb talle mis tüüpi kliendiga on tegu.
         Scanner in = new Scanner(System.in, StandardCharsets.UTF_8);
         String message = in.nextLine();
         while (!message.equals("/exit")) {
@@ -25,7 +29,7 @@ public class Saatja implements Runnable {
             message = in.nextLine();
         }
         try {
-            this.bufferedWriter.close();
+            socketChannel.close();
         } catch (IOException e) {
             System.out.println("Error shutting down the client.");
             System.out.println(e.getMessage());
@@ -33,8 +37,7 @@ public class Saatja implements Runnable {
     }
     public void sendMessage(String message) {
         try {
-            bufferedWriter.write(message);
-            bufferedWriter.flush();
+            socketChannel.write(ByteBuffer.wrap(encrypter.encrypt(message.getBytes(StandardCharsets.UTF_8))));
         } catch (IOException e) {
             System.out.println("Error writing: ");
             System.out.println(e.getMessage());

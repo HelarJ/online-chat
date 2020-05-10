@@ -31,11 +31,6 @@
   </repositories>
 
   <dependencies>
-    <dependency>
-      <groupId>com.google.crypto.tink</groupId>
-      <artifactId>tink</artifactId>
-      <version>HEAD-SNAPSHOT</version>
-    </dependency>
 
     <!-- https://mvnrepository.com/artifact/org.springframework.security/spring-security-crypto -->
     <dependency>

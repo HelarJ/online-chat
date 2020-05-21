@@ -160,7 +160,6 @@ public class Ühendus {
                 Server.logger.info("Java client connected.");
             } catch (NullPointerException e){ //If the Java connections first message isnt its public key, the connection is dropped.
                 Server.logger.info("Unknown handshake: " + new String(bos.toByteArray(), StandardCharsets.UTF_8));
-                sender.sendText("Unknown handshake. Connection closed.", socketChannel);
                 throw new IOException("Unknown handshake");
             }
         }

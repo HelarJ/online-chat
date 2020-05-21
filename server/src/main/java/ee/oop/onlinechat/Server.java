@@ -13,7 +13,7 @@ public class Server
         ServerLog.setup();
 
         try {
-            new Ühendus("localhost", 1337).ühenda();
+            new Ühendus("192.168.1.12", 1337).ühenda();
         } catch (IOException e) {
             logger.severe("Error in the main method of the server: " + e.getMessage());
         }

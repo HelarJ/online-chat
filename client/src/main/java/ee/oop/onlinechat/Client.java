@@ -16,7 +16,7 @@ public class Client {
         int aeg = 5000;
         Crypto decrypter = new Crypto();
         Crypto encrypter;
-        InetSocketAddress hostAddress = new InetSocketAddress("localhost", 1337);
+        InetSocketAddress hostAddress = new InetSocketAddress("192.168.1.3", 1337);
         SocketChannel socketChannel;
         while (true){
             try { //initial trading of public keys.
@@ -26,7 +26,7 @@ public class Client {
                 socketChannel.write(ByteBuffer.wrap(bos.toByteArray()));
 
                 bos.reset();
-                ByteBuffer buffer = ByteBuffer.allocate(1024);
+                ByteBuffer buffer = ByteBuffer.allocate(2048);
                 int count = socketChannel.read(buffer);
                 byte[] data = new byte[count];
                 System.arraycopy(buffer.array(), 0, data, 0, count);

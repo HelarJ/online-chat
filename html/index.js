@@ -10,8 +10,6 @@ socket.onopen = function(event) {
     appendMessage(event.data);
     let messagediv = document.getElementById("messagediv");
     messagediv.scrollBy(0, window.innerHeight);
-
-
   };
   
   socket.onclose = function(event) {
@@ -59,14 +57,7 @@ socket.onopen = function(event) {
       let message = document.createElement("td");
       message.innerText=msg
       newtablerow.appendChild(message);
-
     }
-    
-
-    
-    
-    
-
     table.appendChild(newtablerow)
   }
 

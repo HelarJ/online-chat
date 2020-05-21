@@ -147,17 +147,22 @@ public class Ühendus {
             acceptWebsocket(socketChannel, vastus); //Kui tegu on websocket ühendusega, siis peab server esimesena saatma teatud sõnumi, mis on acceptWebsocketis.
             Server.logger.info("Javascript (ws) client connected.");
         } else { //Kui tegu on java ühendusega, ehk kasutatakse google tink encryptionit.
-            client.setEncrypter(new Crypto(bos.toByteArray())); //Kõigepealt saadakse kliendilt kliendi Public Key ning antakse kliendile Crypto objekt, mida kasutada sõnumite krüpteerimisel.
-            client.setDecrypter(new Crypto()); //Seejärel lisatakse kliendile uus, serveripoolse uue privaatvõtmega Crypto objekt, mida kasutada kliendi poolt saadud sõnumite DEkrüpteerimisel.
-            ByteArrayOutputStream cryptoBos = new ByteArrayOutputStream();
+            try {
+                client.setEncrypter(new Crypto(bos.toByteArray())); //Kõigepealt saadakse kliendilt kliendi Public Key ning antakse kliendile Crypto objekt, mida kasutada sõnumite krüpteerimisel.
+                client.setDecrypter(new Crypto()); //Seejärel lisatakse kliendile uus, serveripoolse uue privaatvõtmega Crypto objekt, mida kasutada kliendi poolt saadud sõnumite DEkrüpteerimisel.
+                ByteArrayOutputStream cryptoBos = new ByteArrayOutputStream();
+                //Seejärel saadetakse private keyst tuletatud public key
+                CleartextKeysetHandle.write(client.getDecrypter().getPublicKeysetHandle(), BinaryKeysetWriter.withOutputStream(cryptoBos));
+                // ning saadetakse see kliendile.
+                sender.sendBytes(socketChannel, cryptoBos.toByteArray());
 
-            //Seejärel saadetakse private keyst tuletatud public key
-            CleartextKeysetHandle.write(client.getDecrypter().getPublicKeysetHandle(), BinaryKeysetWriter.withOutputStream(cryptoBos));
-            // ning saadetakse see kliendile.
-            sender.sendBytes(socketChannel, cryptoBos.toByteArray());
-
-            client.setClientType(ClientType.JAVA);
-            Server.logger.info("Java client connected.");
+                client.setClientType(ClientType.JAVA);
+                Server.logger.info("Java client connected.");
+            } catch (NullPointerException e){ //If the Java connections first message isnt its public key, the connection is dropped.
+                Server.logger.info("Unknown handshake: " + new String(bos.toByteArray(), StandardCharsets.UTF_8));
+                sender.sendText("Unknown handshake. Connection closed.", socketChannel);
+                throw new IOException("Unknown handshake");
+            }
         }
         //Lõpuks saadetakse kõigile tervitus.
         sender.sendText("Welcome to Online Chat! Please use /login (or /register) [username] [password] to start chatting!", socketChannel);

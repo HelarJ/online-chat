@@ -15,7 +15,12 @@ public class ChatLogHandler {
     }
 
     public void logMessage (String channelName, Message msg){
-        chatLogs.get(channelName).logMessage(msg);
+        if (chatLogs.containsKey(channelName)){
+            chatLogs.get(channelName).logMessage(msg);
+        } else {
+            addChannel(channelName);
+        }
+
     }
 
     public Message[] getLastMessages(String channelName, int amount){
@@ -32,7 +37,6 @@ public class ChatLogHandler {
         for (String channel: channelList){
             addChannel(channel);
         }
-
     }
 
     public void addChannel(String channelName){

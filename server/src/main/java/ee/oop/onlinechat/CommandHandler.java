@@ -127,7 +127,7 @@ public class CommandHandler {
             SQLConnection sqlConnection = new SQLConnection();
             SQLResponse response = sqlConnection.login(answerParts[1], answerParts[2], Command.LOGIN);
             if (response == SQLResponse.SUCCESS) {
-                String loginSuccessful = "Login successful.";
+                String loginSuccessful = "Login successful. Use /help to see other commands.";
                 sender.sendText(loginSuccessful, socketChannel);
                 client.setName(answerParts[1]);
                 client.setLoggedIn(true);

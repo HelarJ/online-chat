@@ -10,7 +10,6 @@ public class EmailErrorHandler extends Handler {
     public EmailErrorHandler(String adminEmail) {
         mailer = new Mailer();
         this.adminEmail = adminEmail;
-
     }
 
     @Override
